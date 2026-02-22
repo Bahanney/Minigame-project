@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Scene Zero — A Detective Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <canvas id="rain-canvas"></canvas>
+
+  <div class="wrapper">
+
+    <!-- HEADER -->
+    <header>
+      <div class="game-title">SCENE ZERO</div>
+      <div class="game-subtitle">A Detective's Minesweeper — Find the Truth Before It Finds You</div>
+    </header>
+
+    <!-- CASE FILE BANNER -->
+    <div class="case-banner">
+      <h2 id="case-title">Loading Case...</h2>
+      <p id="case-description"></p>
+    </div>
+
+    <!-- STATS BAR -->
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-label">Time</span>
+        <span class="stat-value" id="timer">00:00</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Red Herrings</span>
+        <span class="stat-value danger" id="herring-count">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Clues Found</span>
+        <span class="stat-value safe" id="clue-count">0 / 5</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Cells Left</span>
+        <span class="stat-value" id="cells-left">—</span>
+      </div>
+    </div>
+
+    <!-- DIFFICULTY -->
+    <div class="difficulty-row">
+      <button class="diff-btn active" data-diff="rookie"     onclick="setDifficulty(this)">Rookie</button>
+      <button class="diff-btn"        data-diff="detective"  onclick="setDifficulty(this)">Detective</button>
+      <button class="diff-btn"        data-diff="hardboiled" onclick="setDifficulty(this)">Hard-Boiled</button>
+    </div>
+
+    <!-- GRID -->
+    <div class="grid-wrapper">
+      <div class="grid-label">— Crime Scene Map — Click to Investigate · Right-click to Flag —</div>
+      <div id="game-grid"></div>
+    </div>
+
+    <!-- SUSPECTS -->
+    <div class="suspects-panel">
+      <div class="panel-title">Suspects</div>
+      <div class="suspects-grid" id="suspects-grid"></div>
+    </div>
+
+    <!-- CLUE LOG -->
+    <div class="clue-log">
+      <div class="panel-title">Evidence Log</div>
+      <div class="clue-log-inner" id="clue-log">
+        <p id="clue-placeholder">No evidence collected yet. Start investigating the scene...</p>
+      </div>
+    </div>
+
+    <!-- DEDUCTION -->
+    <div class="deduction-row">
+      <button class="deduce-btn" id="deduce-btn" disabled onclick="openDeduction()">
+        Name Your Killer
+      </button>
+    </div>
+
+    <footer>Scene Zero &nbsp;·&nbsp; Built by Ibinabo Collins &nbsp;·&nbsp; 2025</footer>
+  </div>
+
+  <!-- DEDUCTION MODAL -->
+  <div class="modal-overlay" id="deduction-modal">
+    <div class="modal">
+      <h2>Make Your Case</h2>
+      <p>You've walked the crime scene. The evidence is in your hands.<br/>
+         One name. One chance. Who is the killer?</p>
+      <div class="modal-options" id="modal-options"></div>
+      <button class="modal-btn secondary" onclick="closeDeduction()">Not Yet — Back to the Scene</button>
+    </div>
+  </div>
+
+  <!-- RESULT MODAL -->
+  <div class="modal-overlay" id="result-modal">
+    <div class="modal" id="result-content"></div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
