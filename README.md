@@ -1,63 +1,66 @@
 # Minigame-project 
-# 🕵️ Scene Zero — A Noir Detective Game
+# 🐍 VENOM — AI Snake Game
 
-> *"Find the truth before it finds you."*
+> *"It learns. It hunts. It wins."*
 
-A browser-based mystery game that blends **Minesweeper mechanics** with **noir detective storytelling**. Reveal the crime scene grid, collect clues, avoid red herrings, and name your killer.
+A neon cyberpunk Snake game with an **adaptive AI hunter** that tracks your movement patterns and uses BFS pathfinding to cut you off. The longer you survive, the smarter it gets.
 
 ---
 
 ## 🎮 Live Demo
 
-👉 **[Play Scene Zero](https://bahanney.github.io/scene-zero)**
-
----
-
-## 🖼️ Screenshots
-
-> *(Add screenshots here after deployment)*
+👉 **[Play VENOM](https://bahanney.github.io/venom)**
 
 ---
 
 ## 🕹️ How to Play
 
-1. **Click any cell** to investigate that part of the crime scene
-2. **Numbers** show how many clues or red herrings are nearby
-3. **Right-click** to flag a suspicious cell
-4. **🔍** = Real clue found — added to your Evidence Log
-5. **✕** = Red herring — a misleading false lead
-6. Collect at least **3 clues** to unlock the **"Name Your Killer"** button
-7. **Accuse the right suspect** to close the case
+| Key | Action |
+|-----|--------|
+| `↑ ↓ ← →` or `W A S D` | Move the snake |
+| `P` or `Escape` | Pause |
+| Swipe | Mobile support |
+
+- **Eat food (◆)** to grow and score points
+- **Avoid poison (✕)** — it appears as you progress
+- **Score 10** and the **AI Hunter wakes up**
+- The hunter tracks your movement patterns and predicts where you're going
+- Every 5 food you eat, the hunter gets faster
 
 ---
 
-## 🗂️ Cases
+## 🤖 The AI System
 
-The game includes **3 unique cases** — each with a different victim, suspects, clues, and killer. Cases are selected randomly each playthrough so no two sessions are the same.
+The hunter uses two real computer science algorithms:
 
-| # | Case | Setting |
-|---|------|---------|
-| 01 | **The Hale Case** | A private investigator shot in his own office |
-| 02 | **The Ashford Dinner** | A wealthy industrialist poisoned at his dinner party |
-| 03 | **Room 404** | A journalist found hidden behind a hotel wall |
+**BFS Pathfinding (Breadth-First Search)**
+Finds the shortest possible route through the grid to reach the player, avoiding obstacles in real time.
+
+**Pattern Recognition**
+Tracks the player's last 20 directional inputs to identify dominant movement habits, then predicts 2–3 steps ahead to intercept rather than just follow.
+
+**Adaptive Speed**
+The hunter's tick rate decreases as your score increases — it gets physically faster the better you play.
 
 ---
 
-## ⚙️ Difficulty Modes
+## ⚙️ Difficulty Scaling
 
-| Mode | Grid Size | Challenge |
-|------|-----------|-----------|
-| Rookie | 7 × 7 | Smaller grid, easier to find clues |
-| Detective | 9 × 9 | Balanced — recommended first play |
-| Hard-Boiled | 11 × 11 | Large grid, clues are harder to locate |
+| Score | What happens |
+|-------|-------------|
+| 0–9   | Classic snake — no hunter |
+| 10    | AI Hunter activates |
+| 15+   | Poison food appears more frequently |
+| Every 5 food | Hunter gets faster |
+| Every 5 score | Player speed increases (new level) |
 
 ---
 
 ## 🛠️ Built With
 
-- **HTML5** — Structure
-- **CSS3** — Noir styling, animations, rain effect, grain texture
-- **Vanilla JavaScript** — Game logic, case engine, flood-fill reveal
+- **HTML5 Canvas** — game rendering
+- **CSS3** — cyberpunk neon UI, scanline effect, glow animations
+- **Vanilla JavaScript** — BFS pathfinding, pattern tracking, game loop
 
 No frameworks. No libraries. Pure front-end.
 
@@ -66,35 +69,34 @@ No frameworks. No libraries. Pure front-end.
 ## 📁 Project Structure
 
 ```
-scene-zero/
-├── index.html       # Game layout and structure
-├── style.css        # All styling — noir theme, animations
-├── game.js          # Game logic, cases, state management
+venom/
+├── index.html       # Game layout and UI
+├── style.css        # Neon cyberpunk styling
+├── game.js          # Game engine, AI logic, pathfinding
 ├── assets/
-│   └── icons/       # Future: case icons, suspect portraits
+│   └── icons/       # Future assets
 └── README.md
 ```
 
 ---
 
-## 🚀 Running Locally
+## 🚀 Run Locally
 
 ```bash
-git clone https://github.com/bahanney/scene-zero.git
-cd scene-zero
+git clone https://github.com/bahanney/venom.git
+cd venom
 ```
 
-Then open `index.html` in your browser — or use the **Live Server** extension in VSCode for auto-reload.
+Open `index.html` in your browser or use **Live Server** in VSCode.
 
 ---
 
 ## 🔮 Planned Features
 
-- [ ] Sound effects (typewriter, rain ambience, case solved sting)
-- [ ] Suspect portrait illustrations
-- [ ] More cases (5+)
-- [ ] High score leaderboard (localStorage)
-- [ ] Mobile touch improvements
+- [ ] High score leaderboard
+- [ ] Multiple AI difficulty modes
+- [ ] Power-ups (speed boost, shield)
+- [ ] Sound effects and music
 
 ---
 
@@ -102,7 +104,3 @@ Then open `index.html` in your browser — or use the **Live Server** extension 
 
 **Ibinabo Collins** — Junior DevOps Engineer  
 [GitHub](https://github.com/bahanney) · [LinkedIn](https://www.linkedin.com/in/ibinabo-collins-)
-
----
-
-*"You can wash away blood. But not guilt."*

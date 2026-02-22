@@ -1,103 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Scene Zero — A Detective Game</title>
+  <title>VENOM — AI Snake</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
-  <canvas id="rain-canvas"></canvas>
+  <!-- Scanline overlay -->
+  <div class="scanlines"></div>
 
   <div class="wrapper">
 
     <!-- HEADER -->
     <header>
-      <div class="game-title">SCENE ZERO</div>
-      <div class="game-subtitle">A Detective's Minesweeper — Find the Truth Before It Finds You</div>
+      <div class="title-row">
+        <span class="title-bracket">[</span>
+        <h1 class="game-title">VENOM</h1>
+        <span class="title-bracket">]</span>
+      </div>
+      <p class="game-subtitle">AI-Powered Snake &nbsp;·&nbsp; It Learns. It Hunts. It Wins.</p>
     </header>
 
-    <!-- CASE FILE BANNER -->
-    <div class="case-banner">
-      <h2 id="case-title">Loading Case...</h2>
-      <p id="case-description"></p>
-    </div>
-
-    <!-- STATS BAR -->
+    <!-- STATS -->
     <div class="stats-bar">
       <div class="stat">
-        <span class="stat-label">Time</span>
-        <span class="stat-value" id="timer">00:00</span>
+        <div class="stat-label">SCORE</div>
+        <div class="stat-value" id="score">000</div>
       </div>
       <div class="stat">
-        <span class="stat-label">Red Herrings</span>
-        <span class="stat-value danger" id="herring-count">0</span>
+        <div class="stat-label">BEST</div>
+        <div class="stat-value" id="best">000</div>
       </div>
       <div class="stat">
-        <span class="stat-label">Clues Found</span>
-        <span class="stat-value safe" id="clue-count">0 / 5</span>
+        <div class="stat-label">LEVEL</div>
+        <div class="stat-value" id="level">01</div>
       </div>
       <div class="stat">
-        <span class="stat-label">Cells Left</span>
-        <span class="stat-value" id="cells-left">—</span>
+        <div class="stat-label">HUNTER</div>
+        <div class="stat-value danger" id="hunter-status">DORMANT</div>
       </div>
     </div>
 
-    <!-- DIFFICULTY -->
-    <div class="difficulty-row">
-      <button class="diff-btn active" data-diff="rookie"     onclick="setDifficulty(this)">Rookie</button>
-      <button class="diff-btn"        data-diff="detective"  onclick="setDifficulty(this)">Detective</button>
-      <button class="diff-btn"        data-diff="hardboiled" onclick="setDifficulty(this)">Hard-Boiled</button>
+    <!-- AI STATUS BAR -->
+    <div class="ai-bar" id="ai-bar">
+      <span class="ai-label">◈ AI</span>
+      <div class="ai-threat-track">
+        <div class="ai-threat-fill" id="ai-threat-fill"></div>
+      </div>
+      <span class="ai-threat-text" id="ai-threat-text">Scanning...</span>
     </div>
 
-    <!-- GRID -->
-    <div class="grid-wrapper">
-      <div class="grid-label">— Crime Scene Map — Click to Investigate · Right-click to Flag —</div>
-      <div id="game-grid"></div>
-    </div>
+    <!-- CANVAS -->
+    <div class="canvas-wrapper">
+      <canvas id="game-canvas"></canvas>
 
-    <!-- SUSPECTS -->
-    <div class="suspects-panel">
-      <div class="panel-title">Suspects</div>
-      <div class="suspects-grid" id="suspects-grid"></div>
-    </div>
+      <!-- OVERLAY SCREENS -->
+      <div class="overlay" id="start-screen">
+        <div class="overlay-box">
+          <div class="overlay-tag">INITIALISING</div>
+          <h2>VENOM</h2>
+          <p>Eat to grow. Survive the grid.<br/>
+          Score 10 and the <span class="highlight-red">AI Hunter</span> wakes up.<br/>
+          It tracks your patterns. It adapts. It does not stop.</p>
+          <div class="controls-hint">
+            <span>↑ ↓ ← →</span> Move &nbsp;·&nbsp; <span>P</span> Pause
+          </div>
+          <button class="btn-primary" id="start-btn">JACK IN</button>
+        </div>
+      </div>
 
-    <!-- CLUE LOG -->
-    <div class="clue-log">
-      <div class="panel-title">Evidence Log</div>
-      <div class="clue-log-inner" id="clue-log">
-        <p id="clue-placeholder">No evidence collected yet. Start investigating the scene...</p>
+      <div class="overlay" id="pause-screen" style="display:none">
+        <div class="overlay-box">
+          <div class="overlay-tag">PAUSED</div>
+          <h2>SYSTEM HALT</h2>
+          <p>The grid is frozen.<br/>The hunter is waiting.</p>
+          <button class="btn-primary" id="resume-btn">RESUME</button>
+        </div>
+      </div>
+
+      <div class="overlay" id="gameover-screen" style="display:none">
+        <div class="overlay-box">
+          <div class="overlay-tag" id="gameover-tag">TERMINATED</div>
+          <h2 id="gameover-title">FLATLINED</h2>
+          <p id="gameover-msg"></p>
+          <div class="final-score-row">
+            <div class="final-stat">
+              <div class="stat-label">FINAL SCORE</div>
+              <div class="stat-value" id="final-score">000</div>
+            </div>
+            <div class="final-stat">
+              <div class="stat-label">BEST</div>
+              <div class="stat-value" id="final-best">000</div>
+            </div>
+          </div>
+          <button class="btn-primary" id="restart-btn">REBOOT</button>
+        </div>
       </div>
     </div>
 
-    <!-- DEDUCTION -->
-    <div class="deduction-row">
-      <button class="deduce-btn" id="deduce-btn" disabled onclick="openDeduction()">
-        Name Your Killer
-      </button>
+    <!-- LEGEND -->
+    <div class="legend">
+      <div class="legend-item">
+        <span class="legend-dot player"></span> You
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot food"></span> Food
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot poison"></span> Poison
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot hunter"></span> AI Hunter
+      </div>
     </div>
 
-    <footer>Scene Zero &nbsp;·&nbsp; Built by Ibinabo Collins &nbsp;·&nbsp; 2025</footer>
-  </div>
-
-  <!-- DEDUCTION MODAL -->
-  <div class="modal-overlay" id="deduction-modal">
-    <div class="modal">
-      <h2>Make Your Case</h2>
-      <p>You've walked the crime scene. The evidence is in your hands.<br/>
-         One name. One chance. Who is the killer?</p>
-      <div class="modal-options" id="modal-options"></div>
-      <button class="modal-btn secondary" onclick="closeDeduction()">Not Yet — Back to the Scene</button>
-    </div>
-  </div>
-
-  <!-- RESULT MODAL -->
-  <div class="modal-overlay" id="result-modal">
-    <div class="modal" id="result-content"></div>
+    <footer>VENOM &nbsp;·&nbsp; Built by Ibinabo Collins &nbsp;·&nbsp; 2025</footer>
   </div>
 
   <script src="game.js"></script>
