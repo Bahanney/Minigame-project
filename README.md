@@ -8,7 +8,7 @@ A classic Snake game reimagined with an **adaptive AI hunter** that tracks your 
 
 ## 🎮 Live Demo
 
-> 🔗 **Live link will be added after deployment via GitHub Pages**
+> 🔗 https://bahanney.github.io/Minigame-project/
 
 To deploy:
 1. Push this repo to GitHub
