@@ -17,23 +17,23 @@ canvas.height = ROWS * CELL;
 
 /* ── COLOURS ───────────────────────────────────── */
 const C = {
-  bg:           '#0d0120',
-  gridLine:     'rgba(192,132,252,0.04)',
-  snake:        '#4fffb0',
-  snakeScale:   '#3de89a',
-  snakeDark:    '#1db872',
+  bg:           '#090710',
+  gridLine:     'rgba(212,168,83,0.04)',
+  snake:        '#5bbf9a',
+  snakeScale:   '#4aaa87',
+  snakeDark:    '#2d7a5e',
   snakeHead:    '#ffffff',
-  snakeGlow:    'rgba(79,255,176,0.5)',
-  snakeTongue:  '#ff4f7b',
-  food:         '#ffe156',
-  foodGlow:     'rgba(255,225,86,0.9)',
-  poison:       '#ff4f7b',
-  poisonGlow:   'rgba(255,79,123,0.8)',
-  hunter:       '#c084fc',
-  hunterScale:  '#a855f7',
-  hunterDark:   '#7c3aed',
-  hunterHead:   '#ff6eb4',
-  hunterGlow:   'rgba(192,132,252,0.5)',
+  snakeGlow:    'rgba(91,191,154,0.3)',
+  snakeTongue:  '#c4687a',
+  food:         '#d4a853',
+  foodGlow:     'rgba(212,168,83,0.6)',
+  poison:       '#c4687a',
+  poisonGlow:   'rgba(196,104,122,0.5)',
+  hunter:       '#a78bca',
+  hunterScale:  '#9070b8',
+  hunterDark:   '#6040a0',
+  hunterHead:   '#c4687a',
+  hunterGlow:   'rgba(167,139,202,0.3)',
 };
 
 /* ── DIRECTIONS ────────────────────────────────── */
@@ -433,10 +433,8 @@ function render() {
 
   // Food — glowing star
   if (state.food) {
-    const pulse = 0.75 + Math.sin(Date.now() / 280) * 0.25;
     ctx.save();
-    ctx.shadowColor = C.foodGlow; ctx.shadowBlur = 18 * pulse;
-    ctx.globalAlpha = pulse;
+    ctx.shadowColor = C.foodGlow; ctx.shadowBlur = 14;
     ctx.fillStyle = C.food;
     ctx.font = `${CELL - 4}px monospace`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -468,11 +466,6 @@ function render() {
   });
   // Player head with eyes and tongue
   drawHead(state.snake[0], state.dir, C.snake, '#ffffff', C.snakeTongue, C.snakeGlow);
-
-  // Schedule next render for food pulse
-  if (state.running && !state.paused) {
-    requestAnimationFrame(render);
-  }
 }
 
 /* ── DRAW SNAKE SEGMENT (realistic scaly) ──────── */
@@ -581,8 +574,8 @@ function drawHead(seg, dir, bodyColor, eyeColor, tongueColor, glowColor) {
   }
   ctx.restore();
 
-  // Tongue flicker
-  const flicker = Math.sin(Date.now() / 120) > 0;
+  // Tongue flicker — alternates every other tick
+  const flicker = state.seconds % 2 === 0;
   if (flicker) {
     ctx.save();
     ctx.strokeStyle = tongueColor;
