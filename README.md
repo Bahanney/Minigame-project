@@ -13,7 +13,7 @@ A classic Snake game reimagined with an **adaptive AI hunter** that tracks your 
 To deploy:
 1. Push this repo to GitHub
 2. Go to **Settings → Pages → Branch: main → Save**
-3. Your link will be: `https://YOUR-USERNAME.github.io/venom`
+3. Your link will be: `https://bahanney.github.io/Minigame-project/`
 
 ---
 
