@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VENOM — Can You Survive?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <!-- ══ SCREEN 1 — WELCOME / HORROR INTRO ══ -->
+  <div id="welcome-screen" class="screen welcome-screen">
+    <div class="blood-drip"></div>
+    <div class="welcome-content">
+      <div class="skull">💀</div>
+      <h1 class="welcome-title">VENOM</h1>
+      <p class="welcome-tagline">Something is waiting in the dark.</p>
+      <div class="welcome-divider">— ✦ —</div>
+      <div class="challenge-box">
+        <p class="challenge-text">
+          Welcome to VENOM.<br/><br/>
+          Can you <span class="highlight-gold">defeat the Hunter</span>?<br/>
+          Can you <span class="highlight-rose">avoid the Poison</span>?<br/><br/>
+          <em>It learns your every move.<br/>It does not stop. It does not forgive.</em>
+        </p>
+      </div>
+      <div class="welcome-buttons">
+        <button class="btn-yes" id="yes-btn">
+          <span>⚔</span> Yes, I'm Ready
+        </button>
+        <button class="btn-no" id="no-btn">
+          <span>🕯</span> No, Take Me Back
+        </button>
+      </div>
+    </div>
+    <div class="welcome-footer">Enter if you dare</div>
+  </div>
+
+  <!-- ══ SCREEN 2 — GAME SCREEN ══ -->
+  <div id="game-screen" class="screen game-screen" style="display:none">
+    <div class="wrapper">
+
+      <!-- HEADER -->
+      <header>
+        <div class="title-row">
+          <span class="title-bracket">[</span>
+          <h1 class="game-title">VENOM</h1>
+          <span class="title-bracket">]</span>
+        </div>
+        <p class="game-subtitle">It Learns. It Hunts. It Wins.</p>
+      </header>
+
+      <!-- STATS BAR -->
+      <div class="stats-bar">
+        <div class="stat">
+          <div class="stat-label">Score</div>
+          <div class="stat-value" id="score">000</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Best</div>
+          <div class="stat-value" id="best">000</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Level</div>
+          <div class="stat-value" id="level">01</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Hunter</div>
+          <div class="stat-value danger" id="hunter-status">DORMANT</div>
+        </div>
+      </div>
+
+      <!-- HUNTER THREAT BAR -->
+      <div class="ai-bar">
+        <span class="ai-label">☠ Hunter</span>
+        <div class="ai-threat-track">
+          <div class="ai-threat-fill" id="ai-threat-fill"></div>
+        </div>
+        <span class="ai-threat-text" id="ai-threat-text">Dormant...</span>
+      </div>
+
+      <!-- CANVAS -->
+      <div class="canvas-wrapper">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- PAUSE OVERLAY -->
+        <div class="overlay" id="pause-screen" style="display:none">
+          <div class="overlay-box">
+            <div class="overlay-tag">Paused</div>
+            <h2>HOLD</h2>
+            <p>The hunter is waiting.<br/>The poison is still there.</p>
+            <button class="btn-primary" id="resume-btn">Resume</button>
+          </div>
+        </div>
+
+        <!-- GAME OVER OVERLAY -->
+        <div class="overlay" id="gameover-screen" style="display:none">
+          <div class="overlay-box">
+            <div class="overlay-tag" id="gameover-tag">Game Over</div>
+            <h2 id="gameover-title">CONSUMED</h2>
+            <p id="gameover-msg"></p>
+            <div class="final-score-row">
+              <div class="final-stat">
+                <div class="stat-label">Final Score</div>
+                <div class="stat-value" id="final-score">000</div>
+              </div>
+              <div class="final-stat">
+                <div class="stat-label">Best</div>
+                <div class="stat-value" id="final-best">000</div>
+              </div>
+            </div>
+            <div class="gameover-btns">
+              <button class="btn-primary" id="restart-btn">Try Again</button>
+              <button class="btn-ghost" id="quit-btn">Quit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEGEND — icons with labels -->
+      <div class="legend">
+        <div class="legend-item">
+          <span class="legend-icon snake-icon">🐍</span>
+          <span>Your Snake</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-icon">★</span>
+          <span>Food</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-icon poison-icon">✕</span>
+          <span>Poison — avoid!</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-icon hunter-icon">☠</span>
+          <span>Hunter</span>
+        </div>
+      </div>
+
+      <footer>VENOM &nbsp;·&nbsp; Built by Ibinabo Collins &nbsp;·&nbsp; 2025</footer>
+    </div>
+  </div>
+
+  <!-- GOODBYE SCREEN -->
+  <div id="goodbye-screen" class="screen goodbye-screen" style="display:none">
+    <div class="goodbye-content">
+      <div class="candle">🕯</div>
+      <h2 class="goodbye-title">Farewell.</h2>
+      <p class="goodbye-text">Perhaps another time.<br/>The Hunter will be waiting.</p>
+      <button class="btn-ghost-light" id="return-btn">← Return</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

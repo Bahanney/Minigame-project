@@ -631,13 +631,13 @@ function endGame(reason) {
 
 /* ── SCREENS ───────────────────────────────────── */
 function showScreen(id) {
-  ['start-screen', 'pause-screen', 'gameover-screen'].forEach(s => {
+  ['pause-screen', 'gameover-screen'].forEach(s => {
     document.getElementById(s).style.display = s === id ? 'flex' : 'none';
   });
 }
 
 function hideAllScreens() {
-  ['start-screen', 'pause-screen', 'gameover-screen'].forEach(s => {
+  ['pause-screen', 'gameover-screen'].forEach(s => {
     document.getElementById(s).style.display = 'none';
   });
 }
@@ -680,12 +680,24 @@ function togglePause() {
   }
 }
 
-/* ── BUTTON EVENTS ─────────────────────────────── */
-document.getElementById('start-btn').addEventListener('click', () => {
-  hideAllScreens();
+/* ── SCREEN SWITCHING ──────────────────────────── */
+document.getElementById('yes-btn').addEventListener('click', () => {
+  document.getElementById('welcome-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display   = 'flex';
+  initGame();
   state.running = true;
   startLoop();
   render();
+});
+
+document.getElementById('no-btn').addEventListener('click', () => {
+  document.getElementById('welcome-screen').style.display = 'none';
+  document.getElementById('goodbye-screen').style.display = 'flex';
+});
+
+document.getElementById('return-btn').addEventListener('click', () => {
+  document.getElementById('goodbye-screen').style.display = 'none';
+  document.getElementById('welcome-screen').style.display = 'flex';
 });
 
 document.getElementById('resume-btn').addEventListener('click', () => {
@@ -700,6 +712,12 @@ document.getElementById('restart-btn').addEventListener('click', () => {
   state.running = true;
   startLoop();
   render();
+});
+
+document.getElementById('quit-btn').addEventListener('click', () => {
+  clearInterval(state.tickTimer);
+  document.getElementById('game-screen').style.display   = 'none';
+  document.getElementById('welcome-screen').style.display = 'flex';
 });
 
 /* ── MOBILE SWIPE ──────────────────────────────── */
@@ -725,5 +743,5 @@ canvas.addEventListener('touchend', e => {
   touchStart = null;
 }, { passive: true });
 
-/* ── START ─────────────────────────────────────── */
-initGame();
+/* ── READY ─────────────────────────────────────── */
+// Game starts when player clicks Yes on the welcome screen
