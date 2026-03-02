@@ -28,6 +28,9 @@ body {
   font-family: 'Cormorant Garamond', Georgia, serif;
   min-height: 100vh;
   overflow-x: hidden;
+  /* Prevent pull-to-refresh and bounce scroll on mobile */
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 /* ══════════════════════════════════════════════
@@ -229,6 +232,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
 }
 
 body::before {

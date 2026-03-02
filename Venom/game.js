@@ -723,11 +723,18 @@ document.getElementById('quit-btn').addEventListener('click', () => {
 /* ── MOBILE SWIPE ──────────────────────────────── */
 let touchStart = null;
 
+// Prevent page scrolling while playing on mobile
+document.addEventListener('touchmove', e => {
+  if (state.running && !state.paused) e.preventDefault();
+}, { passive: false });
+
 canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
   touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-}, { passive: true });
+}, { passive: false });
 
 canvas.addEventListener('touchend', e => {
+  e.preventDefault();
   if (!touchStart || !state.running || state.paused) return;
   const dx = e.changedTouches[0].clientX - touchStart.x;
   const dy = e.changedTouches[0].clientY - touchStart.y;
@@ -741,7 +748,7 @@ canvas.addEventListener('touchend', e => {
     if (dy < -20 && dir.y !==  1) state.nextDir = { ...DIR.UP };
   }
   touchStart = null;
-}, { passive: true });
+}, { passive: false });
 
 /* ── READY ─────────────────────────────────────── */
 // Game starts when player clicks Yes on the welcome screen
