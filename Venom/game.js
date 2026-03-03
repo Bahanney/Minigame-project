@@ -2,13 +2,21 @@
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-const COLS = 20, ROWS = 20, CELL = 22;
-canvas.width = COLS * CELL;
-canvas.height = ROWS * CELL;
+const COLS = 20, ROWS = 20;
+
+// Canvas fills its container dynamically
+function resizeCanvas() {
+  const wrapper = canvas.parentElement;
+  canvas.width  = wrapper.clientWidth;
+  canvas.height = wrapper.clientHeight;
+}
+window.addEventListener('resize', () => { resizeCanvas(); if (!state.running) render(); });
+
+function cellSize() { return Math.floor(Math.min(canvas.width / COLS, canvas.height / ROWS)); }
 
 const C = {
   bg:'#090710', grid:'rgba(212,168,83,0.04)',
-  snake:'#5bbf9a', snakeScale:'#4aaa87', snakeDark:'#2d7a5e', tongue:'#c4687a', snakeGlow:'rgba(91,191,154,0.3)',
+  snake:'#5bbf9a', snakeScale:'#4aaa87', snakeDark:'#2d7a5e', snakeGlow:'rgba(91,191,154,0.3)',
   food:'#d4a853', foodGlow:'rgba(212,168,83,0.6)',
   poison:'#c4687a', poisonGlow:'rgba(196,104,122,0.5)',
   hunter:'#a78bca', hunterScale:'#9070b8', hunterDark:'#6040a0', hunterHead:'#c4687a', hunterGlow:'rgba(167,139,202,0.3)',
@@ -28,8 +36,8 @@ function beep(freq, dur, type='sine', vol=0.15) {
   o.start(); o.stop(audio.currentTime + dur);
 }
 const sfx = {
-  eat:    () => beep(520, 0.1),
-  power:  () => beep(800, 0.2, 'sine', 0.2),
+  eat:    () => { beep(880, 0.06, 'triangle', 0.1); setTimeout(() => beep(1109, 0.08, 'triangle', 0.08), 70); setTimeout(() => beep(1319, 0.12, 'triangle', 0.07), 140); },
+  power:  () => { beep(523, 0.08, 'sine', 0.15); setTimeout(() => beep(659, 0.08), 80); setTimeout(() => beep(784, 0.15), 160); },
   die:    () => beep(120, 0.4, 'sawtooth', 0.3),
   hunter: () => beep(200, 0.15, 'square', 0.1),
   freeze: () => beep(660, 0.3, 'triangle', 0.2),
@@ -72,6 +80,7 @@ function renderBoard(board) {
 
 function init() {
   state = fresh();
+  resizeCanvas();
   spawnFood();
   updateHUD();
   updateBar(0, 'Dormant...');
@@ -281,17 +290,22 @@ function animateScore() {
 
 // Render
 function render() {
+  const CELL = cellSize();
+  const offX = Math.floor((canvas.width  - COLS * CELL) / 2);
+  const offY = Math.floor((canvas.height - ROWS * CELL) / 2);
   ctx.fillStyle=C.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Draw game area background
+  ctx.fillStyle='#090710'; ctx.fillRect(offX,offY,COLS*CELL,ROWS*CELL);
   ctx.strokeStyle=C.grid; ctx.lineWidth=0.5;
-  for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*CELL,0);ctx.lineTo(x*CELL,canvas.height);ctx.stroke();}
-  for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*CELL);ctx.lineTo(canvas.width,y*CELL);ctx.stroke();}
+  for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(offX+x*CELL,offY);ctx.lineTo(offX+x*CELL,offY+ROWS*CELL);ctx.stroke();}
+  for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(offX,offY+y*CELL);ctx.lineTo(offX+COLS*CELL,offY+y*CELL);ctx.stroke();}
 
   // Countdown overlay
   if (state.counting) {
     ctx.fillStyle='rgba(9,7,16,0.85)'; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle=state.countdown>0?'#d4a853':'#5bbf9a';
     ctx.font=`bold ${CELL*4}px Cinzel,serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(state.countdown>0?state.countdown:'GO!', canvas.width/2, canvas.height/2);
+    ctx.fillText(state.countdown>0?state.countdown:'GO!', offX+COLS*CELL/2, offY+ROWS*CELL/2);
     return;
   }
 
@@ -300,10 +314,10 @@ function render() {
     const a=p.life<=10?p.life/10:1;
     ctx.save(); ctx.globalAlpha=a; ctx.shadowColor=C.poisonGlow; ctx.shadowBlur=10;
     ctx.fillStyle=C.poison; ctx.beginPath();
-    ctx.roundRect(p.x*CELL+3,p.y*CELL+3,CELL-6,CELL-6,4); ctx.fill();
+    ctx.roundRect(offX+p.x*CELL+3,offY+p.y*CELL+3,CELL-6,CELL-6,4); ctx.fill();
     ctx.fillStyle=`rgba(255,255,255,${a*0.8})`; ctx.font=`${CELL-8}px monospace`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('✕',p.x*CELL+CELL/2,p.y*CELL+CELL/2); ctx.restore();
+    ctx.fillText('✕',offX+p.x*CELL+CELL/2,offY+p.y*CELL+CELL/2); ctx.restore();
   });
 
   // Powerup
@@ -313,7 +327,7 @@ function render() {
     const col={shield:C.shield,freeze:C.freeze,speed:C.speed}[state.powerup.type];
     ctx.save(); ctx.globalAlpha=a; ctx.shadowColor=col; ctx.shadowBlur=14;
     ctx.font=`${CELL}px monospace`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(icons[state.powerup.type],state.powerup.x*CELL+CELL/2,state.powerup.y*CELL+CELL/2);
+    ctx.fillText(icons[state.powerup.type],offX+state.powerup.x*CELL+CELL/2,offY+state.powerup.y*CELL+CELL/2);
     ctx.restore();
   }
 
@@ -321,30 +335,30 @@ function render() {
   if (state.food) {
     ctx.save(); ctx.shadowColor=C.foodGlow; ctx.shadowBlur=14; ctx.fillStyle=C.food;
     ctx.font=`${CELL-4}px monospace`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('★',state.food.x*CELL+CELL/2,state.food.y*CELL+CELL/2); ctx.restore();
+    ctx.fillText('★',offX+state.food.x*CELL+CELL/2,offY+state.food.y*CELL+CELL/2); ctx.restore();
   }
 
   // Hunter
-  state.hunter.forEach((s,i)=>{ if(!i)return; ctx.globalAlpha=Math.max(0.3,1-i*0.05); drawSeg(s,C.hunter,C.hunterScale,C.hunterDark,C.hunterGlow); ctx.globalAlpha=1; });
-  if (state.hunter.length) drawHead(state.hunter[0],state.hunterDir,C.hunter,C.hunterHead,C.hunterHead,C.hunterGlow);
+  state.hunter.forEach((s,i)=>{ if(!i)return; ctx.globalAlpha=Math.max(0.3,1-i*0.05); drawSeg(s,C.hunter,C.hunterScale,C.hunterDark,C.hunterGlow,CELL,offX,offY); ctx.globalAlpha=1; });
+  if (state.hunter.length) drawHead(state.hunter[0],state.hunterDir,C.hunter,C.hunterHead,C.hunterGlow,CELL,offX,offY);
 
   // Player — shield flashes gold outline
-  if (state.shield) { ctx.save(); ctx.strokeStyle=C.shield; ctx.lineWidth=2; ctx.shadowColor=C.shield; ctx.shadowBlur=12; ctx.strokeRect(state.snake[0].x*CELL+1,state.snake[0].y*CELL+1,CELL-2,CELL-2); ctx.restore(); }
-  state.snake.forEach((s,i)=>{ if(!i)return; ctx.globalAlpha=Math.max(0.35,1-i*0.03); drawSeg(s,C.snake,C.snakeScale,C.snakeDark,C.snakeGlow); ctx.globalAlpha=1; });
-  drawHead(state.snake[0],state.dir,C.snake,'#fff',C.tongue,C.snakeGlow);
+  if (state.shield) { ctx.save(); ctx.strokeStyle=C.shield; ctx.lineWidth=2; ctx.shadowColor=C.shield; ctx.shadowBlur=12; ctx.strokeRect(offX+state.snake[0].x*CELL+1,offY+state.snake[0].y*CELL+1,CELL-2,CELL-2); ctx.restore(); }
+  state.snake.forEach((s,i)=>{ if(!i)return; ctx.globalAlpha=Math.max(0.35,1-i*0.03); drawSeg(s,C.snake,C.snakeScale,C.snakeDark,C.snakeGlow,CELL,offX,offY); ctx.globalAlpha=1; });
+  drawHead(state.snake[0],state.dir,C.snake,'#fff',C.snakeGlow,CELL,offX,offY);
 
   // Player name tag above head
   ctx.save(); ctx.fillStyle='rgba(212,168,83,0.85)'; ctx.font=`bold 9px Cinzel,serif`;
   ctx.textAlign='center'; ctx.textBaseline='bottom';
-  ctx.fillText(playerName, state.snake[0].x*CELL+CELL/2, state.snake[0].y*CELL-1); ctx.restore();
+  ctx.fillText(playerName, offX+state.snake[0].x*CELL+CELL/2, offY+state.snake[0].y*CELL-1); ctx.restore();
 }
 
 // Tint helpers
 function lighten(h,a){const n=parseInt(h.replace('#',''),16);return `rgb(${Math.min(255,(n>>16)+a)},${Math.min(255,((n>>8)&0xff)+a)},${Math.min(255,(n&0xff)+a)})`;}
 function darken(h,a){const n=parseInt(h.replace('#',''),16);return `rgb(${Math.max(0,(n>>16)-a)},${Math.max(0,((n>>8)&0xff)-a)},${Math.max(0,(n&0xff)-a)})`;}
 
-function drawSeg(seg,col,scaleCol,darkCol,glow) {
-  const x=seg.x*CELL, y=seg.y*CELL, cx=x+CELL/2, cy=y+CELL/2, r=CELL/2-1;
+function drawSeg(seg,col,scaleCol,darkCol,glow,CELL,offX,offY) {
+  const x=offX+seg.x*CELL, y=offY+seg.y*CELL, cx=x+CELL/2, cy=y+CELL/2, r=CELL/2-1;
   ctx.save(); ctx.shadowColor=glow; ctx.shadowBlur=8;
   const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,1,cx,cy,r);
   g.addColorStop(0,lighten(col,40)); g.addColorStop(0.4,col); g.addColorStop(1,darkCol);
@@ -354,8 +368,8 @@ function drawSeg(seg,col,scaleCol,darkCol,glow) {
   ctx.globalAlpha=1; ctx.restore();
 }
 
-function drawHead(seg,dir,col,eyeCol,tongueCol,glow) {
-  const x=seg.x*CELL,y=seg.y*CELL,cx=x+CELL/2,cy=y+CELL/2,r=CELL/2-1;
+function drawHead(seg,dir,col,eyeCol,glow,CELL,offX,offY) {
+  const x=offX+seg.x*CELL,y=offY+seg.y*CELL,cx=x+CELL/2,cy=y+CELL/2,r=CELL/2-1;
   ctx.save(); ctx.shadowColor=glow; ctx.shadowBlur=18;
   const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,1,cx,cy,r);
   g.addColorStop(0,lighten(col,60)); g.addColorStop(0.5,col); g.addColorStop(1,darken(col,30));
@@ -376,14 +390,7 @@ function drawHead(seg,dir,col,eyeCol,tongueCol,glow) {
     });
   }
   ctx.restore();
-  if (state.ticks%2===0) {
-    ctx.save(); ctx.strokeStyle=tongueCol; ctx.lineWidth=1.2; ctx.shadowColor=tongueCol; ctx.shadowBlur=6;
-    const tx=cx+dir.x*(r+4),ty=cy+dir.y*(r+4);
-    ctx.beginPath(); ctx.moveTo(cx+dir.x*r,cy+dir.y*r); ctx.lineTo(tx,ty); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+dir.x*3+dir.y*2,ty+dir.y*3+dir.x*2);
-    ctx.moveTo(tx,ty); ctx.lineTo(tx+dir.x*3-dir.y*2,ty+dir.y*3-dir.x*2); ctx.stroke();
-    ctx.restore();
-  }
+
 }
 
 function endGame(reason) {
@@ -427,6 +434,7 @@ document.addEventListener('keydown',e=>{
 
 // Buttons
 document.getElementById('yes-btn').addEventListener('click',()=>{
+  resizeCanvas();
   const n=document.getElementById('player-name-input');
   if(n&&n.value.trim()) playerName=n.value.trim().toUpperCase().slice(0,6);
   go('game-screen'); init();
