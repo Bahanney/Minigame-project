@@ -496,3 +496,42 @@ footer {
 .score-pop { animation: scorePop 0.25s ease; }
 
 @media (max-width: 480px) { .stat-value { font-size: 14px; } .legend { gap: 10px; } }
+
+/* NAME INPUT */
+.name-input {
+  font-family: 'Cinzel', serif;
+  font-size: 12px; letter-spacing: 3px;
+  padding: 10px 20px; background: transparent;
+  border: 1px solid var(--gold-dim); color: var(--gold);
+  text-align: center; text-transform: uppercase; outline: none;
+  width: 220px; transition: border-color 0.2s;
+}
+.name-input::placeholder { color: var(--gold-dim); opacity: 0.6; }
+.name-input:focus { border-color: var(--gold); }
+
+/* POWERUP TOAST */
+.powerup-msg {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px;
+  color: var(--gold); background: rgba(9,7,16,0.9);
+  padding: 6px 18px; border: 1px solid var(--gold-dim);
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none; white-space: nowrap; z-index: 5;
+}
+.powerup-msg.show { opacity: 1; }
+
+/* LEADERBOARD */
+.leaderboard { width: 100%; margin: 10px 0; }
+.lb-title {
+  font-family: 'Cinzel', serif; font-size: 8px;
+  letter-spacing: 4px; color: var(--gold-dim);
+  margin-bottom: 6px; text-transform: uppercase;
+}
+.lb-row {
+  display: flex; justify-content: space-between;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 12px; color: var(--cream-dim);
+  font-style: italic; padding: 3px 0;
+  border-bottom: 1px solid rgba(212,168,83,0.08);
+}
+.lb-row.lb-top { color: var(--gold); font-style: normal; font-weight: 600; }

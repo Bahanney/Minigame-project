@@ -1,754 +1,450 @@
-/* ════════════════════════════════════════════════
-   VENOM — game.js
-   AI Snake Game · Adaptive Hunter
-   Author: Ibinabo Collins
-   ════════════════════════════════════════════════ */
+// VENOM — game.js | Author: Ibinabo Collins
 
-/* ── CANVAS SETUP ──────────────────────────────── */
-const canvas  = document.getElementById('game-canvas');
-const ctx     = canvas.getContext('2d');
-
-const COLS    = 20;
-const ROWS    = 20;
-const CELL    = 22;
-
-canvas.width  = COLS * CELL;
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const COLS = 20, ROWS = 20, CELL = 22;
+canvas.width = COLS * CELL;
 canvas.height = ROWS * CELL;
 
-/* ── COLOURS ───────────────────────────────────── */
 const C = {
-  bg:           '#090710',
-  gridLine:     'rgba(212,168,83,0.04)',
-  snake:        '#5bbf9a',
-  snakeScale:   '#4aaa87',
-  snakeDark:    '#2d7a5e',
-  snakeHead:    '#ffffff',
-  snakeGlow:    'rgba(91,191,154,0.3)',
-  snakeTongue:  '#c4687a',
-  food:         '#d4a853',
-  foodGlow:     'rgba(212,168,83,0.6)',
-  poison:       '#c4687a',
-  poisonGlow:   'rgba(196,104,122,0.5)',
-  hunter:       '#a78bca',
-  hunterScale:  '#9070b8',
-  hunterDark:   '#6040a0',
-  hunterHead:   '#c4687a',
-  hunterGlow:   'rgba(167,139,202,0.3)',
+  bg:'#090710', grid:'rgba(212,168,83,0.04)',
+  snake:'#5bbf9a', snakeScale:'#4aaa87', snakeDark:'#2d7a5e', tongue:'#c4687a', snakeGlow:'rgba(91,191,154,0.3)',
+  food:'#d4a853', foodGlow:'rgba(212,168,83,0.6)',
+  poison:'#c4687a', poisonGlow:'rgba(196,104,122,0.5)',
+  hunter:'#a78bca', hunterScale:'#9070b8', hunterDark:'#6040a0', hunterHead:'#c4687a', hunterGlow:'rgba(167,139,202,0.3)',
+  shield:'#60c8ff', freeze:'#a0e8ff', speed:'#ffe156',
 };
 
-/* ── DIRECTIONS ────────────────────────────────── */
-const DIR = {
-  UP:    { x: 0,  y: -1 },
-  DOWN:  { x: 0,  y:  1 },
-  LEFT:  { x: -1, y:  0 },
-  RIGHT: { x: 1,  y:  0 },
+const DIR = { UP:{x:0,y:-1}, DOWN:{x:0,y:1}, LEFT:{x:-1,y:0}, RIGHT:{x:1,y:0} };
+
+// Web Audio for sound effects
+const audio = new (window.AudioContext || window.webkitAudioContext)();
+function beep(freq, dur, type='sine', vol=0.15) {
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.connect(g); g.connect(audio.destination);
+  o.frequency.value = freq; o.type = type;
+  g.gain.setValueAtTime(vol, audio.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + dur);
+  o.start(); o.stop(audio.currentTime + dur);
+}
+const sfx = {
+  eat:    () => beep(520, 0.1),
+  power:  () => beep(800, 0.2, 'sine', 0.2),
+  die:    () => beep(120, 0.4, 'sawtooth', 0.3),
+  hunter: () => beep(200, 0.15, 'square', 0.1),
+  freeze: () => beep(660, 0.3, 'triangle', 0.2),
 };
 
-/* ── GAME STATE ────────────────────────────────── */
-let state = {};
+let state = {}, playerName = 'YOU';
 
-function freshState() {
+function fresh() {
   return {
-    running:       false,
-    paused:        false,
-    gameOver:      false,
-    score:         0,
-    best:          parseInt(localStorage.getItem('venom_best') || '0'),
-    level:         1,
-    tickRate:      180,       // ms per tick
-    tickTimer:     null,
-
-    // Player snake
-    snake:         [{ x: 12, y: 12 }, { x: 11, y: 12 }, { x: 10, y: 12 }],
-    dir:           { ...DIR.RIGHT },
-    nextDir:       { ...DIR.RIGHT },
-
-    // Food & poison
-    food:          null,
-    poisons:       [],
-    poisonTimer:   0,
-
-    // AI Hunter
-    hunterActive:  false,
-    hunter:        [],        // hunter body segments
-    hunterDir:     { ...DIR.LEFT },
-    hunterTickMod: 2,         // hunter moves every N player ticks
-    hunterTick:    0,
-    hunterSpeed:   1,         // increases over time
-
-    // Pattern tracking — player's last 20 directions
-    playerPattern: [],
-    patternMax:    20,
-
-    // Threat level 0–100
-    threat:        0,
+    running:false, paused:false, over:false,
+    score:0, best:parseInt(localStorage.getItem('venom_best')||'0'), level:1,
+    tickRate:180, timer:null, ticks:0,
+    snake:[{x:12,y:12},{x:11,y:12},{x:10,y:12}],
+    dir:{...DIR.RIGHT}, next:{...DIR.RIGHT},
+    food:null, poisons:[], poisonTimer:0,
+    hunterOn:false, hunter:[], hunterDir:{...DIR.LEFT}, hunterMod:2, hunterTick:0,
+    pattern:[], threat:0,
+    powerup:null,
+    shield:false, frozen:0, speedy:0,
+    countdown:3, counting:true,
   };
 }
 
-/* ── INIT ──────────────────────────────────────── */
-function initGame() {
-  state = freshState();
+// Leaderboard — top 5 stored in localStorage
+function getBoard() { return JSON.parse(localStorage.getItem('venom_board')||'[]'); }
+function saveBoard(score) {
+  const name = playerName || 'YOU';
+  const board = [...getBoard(), {name, score}]
+    .sort((a,b) => b.score - a.score).slice(0,5);
+  localStorage.setItem('venom_board', JSON.stringify(board));
+  return board;
+}
+function renderBoard(board) {
+  const el = document.getElementById('leaderboard');
+  if (!el) return;
+  el.innerHTML = board.map((e,i) =>
+    `<div class="lb-row ${i===0?'lb-top':''}"><span>#${i+1} ${e.name}</span><span>${String(e.score).padStart(3,'0')}</span></div>`
+  ).join('');
+}
+
+function init() {
+  state = fresh();
   spawnFood();
   updateHUD();
-  updateAIBar(0, 'Initialising...');
+  updateBar(0, 'Dormant...');
+  startCountdown();
+}
+
+function startCountdown() {
+  state.counting = true;
   render();
-}
-
-/* ── SPAWN ─────────────────────────────────────── */
-function spawnFood() {
-  state.food = randomEmpty();
-}
-
-function spawnPoison() {
-  const pos = randomEmpty();
-  if (pos) {
-    state.poisons.push({ ...pos, life: 28 }); // ~5 seconds at 180ms/tick
-  }
-}
-
-function spawnHunter() {
-  // Spawn hunter on the opposite side of the grid from the player head
-  const head   = state.snake[0];
-  const spawnX = head.x < COLS / 2 ? COLS - 3 : 2;
-  const spawnY = head.y < ROWS / 2 ? ROWS - 3 : 2;
-  state.hunter = [
-    { x: spawnX,     y: spawnY },
-    { x: spawnX + 1, y: spawnY },
-    { x: spawnX + 2, y: spawnY },
-  ];
-  state.hunterActive = true;
-  document.getElementById('hunter-status').textContent = 'ACTIVE';
-  document.getElementById('hunter-status').classList.add('active');
-}
-
-function randomEmpty() {
-  const occupied = new Set();
-  state.snake.forEach(s   => occupied.add(`${s.x},${s.y}`));
-  state.hunter.forEach(h  => occupied.add(`${h.x},${h.y}`));
-  state.poisons.forEach(p => occupied.add(`${p.x},${p.y}`));
-  if (state.food) occupied.add(`${state.food.x},${state.food.y}`);
-
-  const cells = [];
-  for (let x = 0; x < COLS; x++) {
-    for (let y = 0; y < ROWS; y++) {
-      if (!occupied.has(`${x},${y}`)) cells.push({ x, y });
+  const cd = setInterval(() => {
+    state.countdown--;
+    render();
+    if (state.countdown <= 0) {
+      clearInterval(cd);
+      state.counting = false;
+      state.running = true;
+      startLoop();
     }
-  }
-  return cells.length ? cells[Math.floor(Math.random() * cells.length)] : null;
+  }, 900);
 }
 
-/* ── GAME LOOP ─────────────────────────────────── */
+// Spawn helpers
+const occ = () => {
+  const s = new Set();
+  [...state.snake, ...state.hunter].forEach(p => s.add(`${p.x},${p.y}`));
+  state.poisons.forEach(p => s.add(`${p.x},${p.y}`));
+  if (state.food) s.add(`${state.food.x},${state.food.y}`);
+  if (state.powerup) s.add(`${state.powerup.x},${state.powerup.y}`);
+  return s;
+};
+function randEmpty() {
+  const taken = occ(), cells = [];
+  for (let x=0;x<COLS;x++) for (let y=0;y<ROWS;y++)
+    if (!taken.has(`${x},${y}`)) cells.push({x,y});
+  return cells.length ? cells[Math.floor(Math.random()*cells.length)] : null;
+}
+function spawnFood()   { state.food = randEmpty(); }
+function spawnPoison() { const p = randEmpty(); if (p) state.poisons.push({...p, life:28}); }
+function spawnPowerup() {
+  if (state.powerup) return;
+  const types = ['shield','freeze','speed'];
+  const p = randEmpty();
+  if (p) state.powerup = {...p, type:types[Math.floor(Math.random()*3)], life:40};
+}
+function spawnHunter() {
+  const h = state.snake[0];
+  const sx = h.x < COLS/2 ? COLS-3 : 2, sy = h.y < ROWS/2 ? ROWS-3 : 2;
+  state.hunter = [{x:sx,y:sy},{x:sx+1,y:sy},{x:sx+2,y:sy}];
+  state.hunterOn = true;
+  const el = document.getElementById('hunter-status');
+  el.textContent = 'ACTIVE'; el.classList.add('active');
+  sfx.hunter();
+}
+
 function startLoop() {
-  clearInterval(state.tickTimer);
-  state.tickTimer = setInterval(tick, state.tickRate);
+  clearInterval(state.timer);
+  state.timer = setInterval(tick, state.tickRate);
 }
 
 function tick() {
-  if (!state.running || state.paused || state.gameOver) return;
-  movePlayer();
-  if (state.gameOver) return;
+  if (!state.running || state.paused || state.over) return;
+  state.ticks++;
+  if (state.frozen > 0) state.frozen--;
 
-  // Hunter logic
-  if (state.hunterActive) {
+  movePlayer(); if (state.over) return;
+
+  if (state.hunterOn && state.frozen === 0) {
     state.hunterTick++;
-    if (state.hunterTick >= state.hunterTickMod) {
-      state.hunterTick = 0;
-      moveHunter();
-    }
+    if (state.hunterTick >= state.hunterMod) { state.hunterTick=0; moveHunter(); }
   }
 
-  // Poison tick
+  // Powerup tick
+  if (state.powerup) { state.powerup.life--; if (state.powerup.life<=0) state.powerup=null; }
+  if (state.speedy > 0) { state.speedy--; if (state.speedy===0) { state.tickRate=Math.max(100,180-(state.level-1)*8); startLoop(); } }
+
+  // Poison spawn
   state.poisonTimer++;
-  if (state.poisonTimer % 25 === 0 && state.score >= 5) spawnPoison();
-  state.poisons = state.poisons
-    .map(p => ({ ...p, life: p.life - 1 }))
-    .filter(p => p.life > 0);
+  if (state.poisonTimer%25===0 && state.score>=5) spawnPoison();
+  if (state.score>=15 && Math.random()<0.01) spawnPowerup();
+  state.poisons = state.poisons.map(p=>({...p,life:p.life-1})).filter(p=>p.life>0);
 
-  // Level up every 5 food
-  const newLevel = Math.floor(state.score / 5) + 1;
-  if (newLevel !== state.level) {
-    state.level = newLevel;
-    state.tickRate = Math.max(100, 180 - (state.level - 1) * 8);
-    state.hunterTickMod = Math.max(1, 2 - Math.floor(state.level / 3));
-    startLoop();
+  // Level up
+  const lv = Math.floor(state.score/5)+1;
+  if (lv !== state.level) {
+    state.level = lv;
+    if (state.speedy===0) { state.tickRate=Math.max(100,180-(lv-1)*8); startLoop(); }
+    if (lv%3===0) state.hunterMod = Math.max(1, state.hunterMod-0.5);
   }
 
-  // Threat meter
-  updateThreat();
-  updateHUD();
-  render();
+  updateThreat(); updateHUD(); render();
 }
 
-/* ── MOVE PLAYER ───────────────────────────────── */
 function movePlayer() {
-  state.dir = { ...state.nextDir };
+  state.dir = {...state.next};
+  state.pattern.push({...state.dir});
+  if (state.pattern.length>20) state.pattern.shift();
 
-  // Track pattern
-  state.playerPattern.push({ ...state.dir });
-  if (state.playerPattern.length > state.patternMax) state.playerPattern.shift();
+  const head = {x:state.snake[0].x+state.dir.x, y:state.snake[0].y+state.dir.y};
 
-  const head = {
-    x: state.snake[0].x + state.dir.x,
-    y: state.snake[0].y + state.dir.y,
-  };
-
-  // Wall collision
-  if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
-    return endGame('You hit the wall.');
-  }
-
-  // Self collision
-  if (state.snake.some(s => s.x === head.x && s.y === head.y)) {
-    return endGame('You bit yourself.');
-  }
-
-  // Hunter collision — player hits hunter body
-  if (state.hunter.some(h => h.x === head.x && h.y === head.y)) {
-    return endGame('The hunter got you.');
-  }
-
-  // Poison collision
-  if (state.poisons.some(p => p.x === head.x && p.y === head.y)) {
-    return endGame('You ate poison.');
-  }
+  if (head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS) return endGame('You hit the wall.');
+  if (state.snake.some(s=>s.x===head.x&&s.y===head.y)) return endGame('You bit yourself.');
+  if (!state.shield && state.hunter.some(h=>h.x===head.x&&h.y===head.y)) return endGame('The Hunter got you.');
+  if (state.hunter.some(h=>h.x===head.x&&h.y===head.y) && state.shield) { state.shield=false; }
+  if (state.poisons.some(p=>p.x===head.x&&p.y===head.y)) return endGame('You ate poison.');
 
   state.snake.unshift(head);
 
-  // Food collision
-  if (state.food && head.x === state.food.x && head.y === state.food.y) {
-    state.score++;
-    animateScore();
-
-    // Wake up the hunter at score 10
-    if (state.score === 10 && !state.hunterActive) spawnHunter();
-
-    // Increase hunter speed every 5 food after it's active
-    if (state.hunterActive && state.score % 5 === 0) {
-      state.hunterTickMod = Math.max(1, state.hunterTickMod - 0.5);
-    }
-
+  if (state.food && head.x===state.food.x && head.y===state.food.y) {
+    state.score++; sfx.eat(); animateScore();
+    if (state.score===10 && !state.hunterOn) spawnHunter();
+    if (state.hunterOn && state.score%5===0) state.hunterMod=Math.max(1,state.hunterMod-0.5);
     spawnFood();
   } else {
     state.snake.pop();
   }
+
+  // Powerup collection
+  if (state.powerup && head.x===state.powerup.x && head.y===state.powerup.y) {
+    applyPowerup(state.powerup.type);
+    state.powerup = null;
+  }
 }
 
-/* ── MOVE HUNTER (BFS PATHFINDING) ────────────────
-   The AI uses BFS to find the shortest path to the
-   player's head, predicting where the player is going
-   based on their tracked movement pattern.
-   ────────────────────────────────────────────────── */
-function moveHunter() {
-  if (!state.hunterActive || state.hunter.length === 0) return;
-
-  // Predict where player will be (1–2 steps ahead based on pattern)
-  const target = predictPlayerPosition();
-
-  const next = bfsNextStep(state.hunter[0], target, state.hunter);
-
-  if (!next) {
-    // No path found — move randomly to avoid getting stuck
-    const dirs  = Object.values(DIR);
-    const valid = dirs.filter(d => {
-      const nx = state.hunter[0].x + d.x;
-      const ny = state.hunter[0].y + d.y;
-      return nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS &&
-             !state.hunter.some(h => h.x === nx && h.y === ny);
-    });
-    if (!valid.length) return;
-    const pick = valid[Math.floor(Math.random() * valid.length)];
-    const newHead = { x: state.hunter[0].x + pick.x, y: state.hunter[0].y + pick.y };
-    state.hunter.unshift(newHead);
-    state.hunter.pop();
-    return;
-  }
-
-  const newHead = { ...next };
-
-  // Hunter eats player — game over
-  if (state.snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
-    return endGame('The AI hunter consumed you.');
-  }
-
-  state.hunter.unshift(newHead);
-  state.hunter.pop();
+function applyPowerup(type) {
+  sfx.power();
+  if (type==='shield') { state.shield=true; }
+  else if (type==='freeze') { state.frozen=20; sfx.freeze(); }
+  else if (type==='speed')  { state.speedy=15; state.tickRate=280; startLoop(); }
+  showPowerupMsg(type);
 }
 
-/* ── BFS PATHFINDING ───────────────────────────── */
-function bfsNextStep(from, to, hunterBody) {
-  const queue   = [{ pos: from, path: [] }];
-  const visited = new Set([`${from.x},${from.y}`]);
+function showPowerupMsg(type) {
+  const msgs = {shield:'🛡 Shield Active!', freeze:'❄ Hunter Frozen!', speed:'⚡ Slow Motion!'};
+  const el = document.getElementById('powerup-msg');
+  if (!el) return;
+  el.textContent = msgs[type]; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
 
-  // Obstacles: walls implicitly, snake body, hunter body (except tail)
-  const blocked = new Set();
-  state.snake.forEach(s       => blocked.add(`${s.x},${s.y}`));
-  hunterBody.slice(0, -1).forEach(h => blocked.add(`${h.x},${h.y}`));
-
-  while (queue.length) {
-    const { pos, path } = queue.shift();
-
+// BFS pathfinding — finds shortest route to player
+function bfs(from, to, body) {
+  const q=[{pos:from,path:[]}], seen=new Set([`${from.x},${from.y}`]);
+  const blocked=new Set([...state.snake.map(s=>`${s.x},${s.y}`),...body.slice(0,-1).map(h=>`${h.x},${h.y}`)]);
+  while (q.length) {
+    const {pos,path} = q.shift();
     for (const d of Object.values(DIR)) {
-      const nx = pos.x + d.x;
-      const ny = pos.y + d.y;
-      const key = `${nx},${ny}`;
-
-      if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
-      if (visited.has(key) || blocked.has(key)) continue;
-
-      const newPath = [...path, { x: nx, y: ny }];
-
-      if (nx === to.x && ny === to.y) {
-        return newPath[0] || null; // return the first step
-      }
-
-      visited.add(key);
-      queue.push({ pos: { x: nx, y: ny }, path: newPath });
+      const nx=pos.x+d.x, ny=pos.y+d.y, k=`${nx},${ny}`;
+      if (nx<0||nx>=COLS||ny<0||ny>=ROWS||seen.has(k)||blocked.has(k)) continue;
+      const np=[...path,{x:nx,y:ny}];
+      if (nx===to.x&&ny===to.y) return np[0]||null;
+      seen.add(k); q.push({pos:{x:nx,y:ny},path:np});
     }
   }
   return null;
 }
 
-/* ── PREDICT PLAYER POSITION ───────────────────── */
-function predictPlayerPosition() {
-  // Analyse last 10 moves to find dominant direction
-  const recent = state.playerPattern.slice(-10);
-  const counts = {};
-  recent.forEach(d => {
-    const key = `${d.x},${d.y}`;
-    counts[key] = (counts[key] || 0) + 1;
-  });
-
-  // Find most common direction
-  let dominant = state.dir;
-  let max = 0;
-  Object.entries(counts).forEach(([key, count]) => {
-    if (count > max) {
-      max = count;
-      const [x, y] = key.split(',').map(Number);
-      dominant = { x, y };
-    }
-  });
-
-  // Predict 2 steps ahead
-  const head = state.snake[0];
-  const steps = state.level >= 3 ? 3 : 2;
-  return {
-    x: Math.min(COLS - 1, Math.max(0, head.x + dominant.x * steps)),
-    y: Math.min(ROWS - 1, Math.max(0, head.y + dominant.y * steps)),
-  };
+// Pattern prediction — looks at last 10 moves to anticipate player direction
+function predict() {
+  const recent=state.pattern.slice(-10), counts={};
+  recent.forEach(d=>{ const k=`${d.x},${d.y}`; counts[k]=(counts[k]||0)+1; });
+  let dom=state.dir, max=0;
+  Object.entries(counts).forEach(([k,v])=>{ if(v>max){max=v;const[x,y]=k.split(',').map(Number);dom={x,y};} });
+  const steps=state.level>=3?3:2, h=state.snake[0];
+  return {x:Math.min(COLS-1,Math.max(0,h.x+dom.x*steps)), y:Math.min(ROWS-1,Math.max(0,h.y+dom.y*steps))};
 }
 
-/* ── THREAT METER ──────────────────────────────── */
+function moveHunter() {
+  if (!state.hunterOn||!state.hunter.length) return;
+  const next = bfs(state.hunter[0], predict(), state.hunter);
+  if (!next) {
+    const valid=Object.values(DIR).filter(d=>{
+      const nx=state.hunter[0].x+d.x, ny=state.hunter[0].y+d.y;
+      return nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&!state.hunter.some(h=>h.x===nx&&h.y===ny);
+    });
+    if (!valid.length) return;
+    const p=valid[Math.floor(Math.random()*valid.length)];
+    state.hunter.unshift({x:state.hunter[0].x+p.x,y:state.hunter[0].y+p.y});
+  } else {
+    if (state.snake.some(s=>s.x===next.x&&s.y===next.y)) return endGame('The Hunter consumed you.');
+    state.hunter.unshift(next);
+  }
+  state.hunter.pop();
+}
+
 function updateThreat() {
-  if (!state.hunterActive) {
-    const warmup = Math.min(100, (state.score / 10) * 100);
-    state.threat = warmup;
-    updateAIBar(warmup, warmup < 100 ? `Wakes at score 10 · (${state.score}/10)` : 'AWAKENING...');
-    return;
-  }
-
-  const hx = state.hunter[0].x;
-  const hy = state.hunter[0].y;
-  const px = state.snake[0].x;
-  const py = state.snake[0].y;
-  const dist = Math.abs(hx - px) + Math.abs(hy - py);
-  const maxDist = COLS + ROWS;
-
-  const proximity  = Math.max(0, 100 - (dist / maxDist) * 100);
-  const levelBonus = Math.min(30, state.level * 3);
-  state.threat = Math.min(100, proximity + levelBonus);
-
-  const messages = [
-    'Recalibrating route...',
-    'Tracking your pattern...',
-    'Predicting your path...',
-    'Closing in...',
-    'TARGET ACQUIRED',
-  ];
-  const msgIdx = Math.floor((state.threat / 100) * (messages.length - 1));
-  updateAIBar(state.threat, messages[msgIdx]);
+  if (!state.hunterOn) { updateBar(Math.min(100,(state.score/10)*100),`Wakes at score 10 (${state.score}/10)`); return; }
+  const d=Math.abs(state.hunter[0].x-state.snake[0].x)+Math.abs(state.hunter[0].y-state.snake[0].y);
+  const pct=Math.min(100,Math.max(0,100-(d/(COLS+ROWS))*100)+state.level*3);
+  state.threat=pct;
+  const msgs=['Recalibrating...','Tracking pattern...','Predicting path...','Closing in...','TARGET ACQUIRED'];
+  updateBar(pct, state.frozen>0?'❄ Frozen!':msgs[Math.floor(pct/25)]);
+}
+function updateBar(pct,msg) {
+  document.getElementById('ai-threat-fill').style.width=`${pct}%`;
+  document.getElementById('ai-threat-text').textContent=msg;
 }
 
-function updateAIBar(pct, msg) {
-  document.getElementById('ai-threat-fill').style.width = `${pct}%`;
-  document.getElementById('ai-threat-text').textContent = msg;
-}
-
-/* ── HUD ───────────────────────────────────────── */
 function updateHUD() {
-  const scoreEl = document.getElementById('score');
-  scoreEl.textContent = String(state.score).padStart(3, '0');
-  document.getElementById('best').textContent  = String(state.best).padStart(3, '0');
-  document.getElementById('level').textContent = String(state.level).padStart(2, '0');
+  document.getElementById('score').textContent=String(state.score).padStart(3,'0');
+  document.getElementById('best').textContent=String(state.best).padStart(3,'0');
+  document.getElementById('level').textContent=String(state.level).padStart(2,'0');
 }
-
 function animateScore() {
-  const el = document.getElementById('score');
-  el.classList.remove('score-pop');
-  void el.offsetWidth;
-  el.classList.add('score-pop');
+  const el=document.getElementById('score');
+  el.classList.remove('score-pop'); void el.offsetWidth; el.classList.add('score-pop');
 }
 
-/* ── RENDER ────────────────────────────────────── */
+// Render
 function render() {
-  const W = canvas.width;
-  const H = canvas.height;
+  ctx.fillStyle=C.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle=C.grid; ctx.lineWidth=0.5;
+  for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*CELL,0);ctx.lineTo(x*CELL,canvas.height);ctx.stroke();}
+  for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*CELL);ctx.lineTo(canvas.width,y*CELL);ctx.stroke();}
 
-  // Background
-  ctx.fillStyle = C.bg;
-  ctx.fillRect(0, 0, W, H);
-
-  // Grid lines
-  ctx.strokeStyle = C.gridLine;
-  ctx.lineWidth   = 0.5;
-  for (let x = 0; x <= COLS; x++) {
-    ctx.beginPath();
-    ctx.moveTo(x * CELL, 0);
-    ctx.lineTo(x * CELL, H);
-    ctx.stroke();
-  }
-  for (let y = 0; y <= ROWS; y++) {
-    ctx.beginPath();
-    ctx.moveTo(0, y * CELL);
-    ctx.lineTo(W, y * CELL);
-    ctx.stroke();
-  }
-
-  // Poisons — fade out in last 10 ticks
-  state.poisons.forEach(p => {
-    const alpha = p.life <= 10 ? p.life / 10 : 1;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.shadowColor = C.poisonGlow; ctx.shadowBlur = 10;
-    ctx.fillStyle = C.poison;
-    ctx.beginPath();
-    ctx.roundRect(p.x * CELL + 3, p.y * CELL + 3, CELL - 6, CELL - 6, 4);
-    ctx.fill();
-    ctx.fillStyle = `rgba(255,255,255,${alpha * 0.8})`;
-    ctx.font = `${CELL - 8}px monospace`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('✕', p.x * CELL + CELL / 2, p.y * CELL + CELL / 2);
-    ctx.restore();
-  });
-
-  // Food — glowing star
-  if (state.food) {
-    ctx.save();
-    ctx.shadowColor = C.foodGlow; ctx.shadowBlur = 14;
-    ctx.fillStyle = C.food;
-    ctx.font = `${CELL - 4}px monospace`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('★', state.food.x * CELL + CELL / 2, state.food.y * CELL + CELL / 2);
-    ctx.restore();
-  }
-
-  // Hunter snake — realistic scaly purple
-  state.hunter.forEach((seg, i) => {
-    if (i === 0) return; // head drawn last
-    const alpha = Math.max(0.3, 1 - i * 0.05);
-    ctx.globalAlpha = alpha;
-    drawSegment(seg, state.hunter[i-1], state.hunter[i+1],
-      C.hunter, C.hunterScale, C.hunterDark, C.hunterGlow, false, i, state.hunter.length);
-    ctx.globalAlpha = 1;
-  });
-  if (state.hunter.length > 0) {
-    drawHead(state.hunter[0], state.hunterDir, C.hunter, C.hunterHead, '#ff6eb4', C.hunterGlow);
-  }
-
-  // Player snake — realistic scaly green
-  state.snake.forEach((seg, i) => {
-    if (i === 0) return; // head drawn last
-    const alpha = Math.max(0.35, 1 - i * 0.03);
-    ctx.globalAlpha = alpha;
-    drawSegment(seg, state.snake[i-1], state.snake[i+1],
-      C.snake, C.snakeScale, C.snakeDark, C.snakeGlow, false, i, state.snake.length);
-    ctx.globalAlpha = 1;
-  });
-  // Player head with eyes and tongue
-  drawHead(state.snake[0], state.dir, C.snake, '#ffffff', C.snakeTongue, C.snakeGlow);
-}
-
-/* ── DRAW SNAKE SEGMENT (realistic scaly) ──────── */
-function drawSegment(seg, next, prev, color, scaleColor, darkColor, glowColor, isHead, index, totalLen) {
-  const x  = seg.x * CELL;
-  const y  = seg.y * CELL;
-  const cx = x + CELL / 2;
-  const cy = y + CELL / 2;
-  const r  = CELL / 2 - 1;
-
-  ctx.save();
-  ctx.shadowColor = glowColor;
-  ctx.shadowBlur  = isHead ? 16 : 8;
-
-  // Body gradient — gives 3D rounded look
-  const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 1, cx, cy, r);
-  grad.addColorStop(0,   lighten(color, 40));
-  grad.addColorStop(0.4, color);
-  grad.addColorStop(1,   darkColor);
-
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.roundRect(x + 2, y + 2, CELL - 4, CELL - 4, isHead ? CELL / 2 : 5);
-  ctx.fill();
-
-  // Scale pattern — small oval highlights
-  if (!isHead) {
-    const scaleCount = 2;
-    ctx.fillStyle = scaleColor;
-    ctx.globalAlpha = 0.35;
-    for (let sx = 0; sx < scaleCount; sx++) {
-      for (let sy = 0; sy < scaleCount; sy++) {
-        const ox = x + 4 + sx * (CELL - 8) / scaleCount;
-        const oy = y + 4 + sy * (CELL - 8) / scaleCount;
-        ctx.beginPath();
-        ctx.ellipse(ox + 3, oy + 3, 3.5, 2.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    // Belly stripe
-    ctx.fillStyle = lighten(color, 60);
-    ctx.globalAlpha = 0.15;
-    ctx.fillRect(x + CELL * 0.3, y + 2, CELL * 0.4, CELL - 4);
-    ctx.globalAlpha = 1;
-  }
-
-  ctx.restore();
-}
-
-function lighten(hex, amount) {
-  const num = parseInt(hex.replace('#',''), 16);
-  const r   = Math.min(255, (num >> 16) + amount);
-  const g   = Math.min(255, ((num >> 8) & 0xff) + amount);
-  const b   = Math.min(255, (num & 0xff) + amount);
-  return `rgb(${r},${g},${b})`;
-}
-
-/* ── DRAW HEAD WITH EYES & TONGUE ──────────────── */
-function drawHead(seg, dir, bodyColor, eyeColor, tongueColor, glowColor) {
-  const x  = seg.x * CELL;
-  const y  = seg.y * CELL;
-  const cx = x + CELL / 2;
-  const cy = y + CELL / 2;
-  const r  = CELL / 2 - 1;
-
-  ctx.save();
-  ctx.shadowColor = glowColor;
-  ctx.shadowBlur  = 18;
-
-  const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 1, cx, cy, r);
-  grad.addColorStop(0, lighten(bodyColor, 60));
-  grad.addColorStop(0.5, bodyColor);
-  grad.addColorStop(1, darken(bodyColor, 30));
-
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.roundRect(x + 1, y + 1, CELL - 2, CELL - 2, CELL / 2);
-  ctx.fill();
-  ctx.restore();
-
-  // Eyes
-  ctx.save();
-  let e1, e2;
-  const eo = 3.5;
-  if (dir.x === 1)  { e1 = {x: cx+3, y: cy-eo}; e2 = {x: cx+3, y: cy+eo}; }
-  if (dir.x === -1) { e1 = {x: cx-3, y: cy-eo}; e2 = {x: cx-3, y: cy+eo}; }
-  if (dir.y === -1) { e1 = {x: cx-eo, y: cy-3}; e2 = {x: cx+eo, y: cy-3}; }
-  if (dir.y ===  1) { e1 = {x: cx-eo, y: cy+3}; e2 = {x: cx+eo, y: cy+3}; }
-  if (e1) {
-    // Eye white
-    ctx.fillStyle = '#fff';
-    ctx.shadowColor = eyeColor; ctx.shadowBlur = 6;
-    ctx.beginPath(); ctx.arc(e1.x, e1.y, 2.8, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(e2.x, e2.y, 2.8, 0, Math.PI*2); ctx.fill();
-    // Pupil
-    ctx.fillStyle = '#111';
-    ctx.shadowBlur = 0;
-    ctx.beginPath(); ctx.arc(e1.x + dir.x * 0.5, e1.y + dir.y * 0.5, 1.4, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(e2.x + dir.x * 0.5, e2.y + dir.y * 0.5, 1.4, 0, Math.PI*2); ctx.fill();
-    // Eye shine
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.beginPath(); ctx.arc(e1.x - 0.6, e1.y - 0.6, 0.7, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(e2.x - 0.6, e2.y - 0.6, 0.7, 0, Math.PI*2); ctx.fill();
-  }
-  ctx.restore();
-
-  // Tongue flicker — alternates every other tick
-  const flicker = state.seconds % 2 === 0;
-  if (flicker) {
-    ctx.save();
-    ctx.strokeStyle = tongueColor;
-    ctx.lineWidth   = 1.2;
-    ctx.shadowColor = tongueColor;
-    ctx.shadowBlur  = 6;
-    const tx = cx + dir.x * (r + 4);
-    const ty = cy + dir.y * (r + 4);
-    ctx.beginPath(); ctx.moveTo(cx + dir.x * r, cy + dir.y * r);
-    ctx.lineTo(tx, ty);
-    ctx.stroke();
-    // Fork
-    ctx.beginPath();
-    ctx.moveTo(tx, ty);
-    ctx.lineTo(tx + dir.x * 3 + dir.y * 2, ty + dir.y * 3 + dir.x * 2);
-    ctx.moveTo(tx, ty);
-    ctx.lineTo(tx + dir.x * 3 - dir.y * 2, ty + dir.y * 3 - dir.x * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-}
-
-function darken(hex, amount) {
-  const num = parseInt(hex.replace('#',''), 16);
-  const r   = Math.max(0, (num >> 16) - amount);
-  const g   = Math.max(0, ((num >> 8) & 0xff) - amount);
-  const b   = Math.max(0, (num & 0xff) - amount);
-  return `rgb(${r},${g},${b})`;
-}
-
-/* ── GAME OVER ─────────────────────────────────── */
-function endGame(reason) {
-  state.gameOver = true;
-  state.running  = false;
-  clearInterval(state.tickTimer);
-
-  if (state.score > state.best) {
-    state.best = state.score;
-    localStorage.setItem('venom_best', state.best);
-  }
-
-  document.getElementById('gameover-title').textContent =
-    state.score >= 20 ? 'IMPRESSIVE.' : state.score >= 10 ? 'FLATLINED' : 'TERMINATED';
-  document.getElementById('gameover-tag').textContent =
-    state.hunterActive ? 'HUNTER WINS' : 'GAME OVER';
-  document.getElementById('gameover-msg').textContent = reason;
-  document.getElementById('final-score').textContent = String(state.score).padStart(3, '0');
-  document.getElementById('final-best').textContent  = String(state.best).padStart(3, '0');
-
-  showScreen('gameover-screen');
-  render();
-}
-
-/* ── SCREENS ───────────────────────────────────── */
-function showScreen(id) {
-  ['pause-screen', 'gameover-screen'].forEach(s => {
-    document.getElementById(s).style.display = s === id ? 'flex' : 'none';
-  });
-}
-
-function hideAllScreens() {
-  ['pause-screen', 'gameover-screen'].forEach(s => {
-    document.getElementById(s).style.display = 'none';
-  });
-}
-
-/* ── INPUT ─────────────────────────────────────── */
-document.addEventListener('keydown', e => {
-  if (!state.running) return;
-
-  const key = e.key;
-
-  // Prevent page scroll
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(key)) {
-    e.preventDefault();
-  }
-
-  // Pause
-  if (key === 'p' || key === 'P' || key === 'Escape') {
-    togglePause();
+  // Countdown overlay
+  if (state.counting) {
+    ctx.fillStyle='rgba(9,7,16,0.85)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle=state.countdown>0?'#d4a853':'#5bbf9a';
+    ctx.font=`bold ${CELL*4}px Cinzel,serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(state.countdown>0?state.countdown:'GO!', canvas.width/2, canvas.height/2);
     return;
   }
 
-  if (state.paused || state.gameOver) return;
+  // Poisons
+  state.poisons.forEach(p=>{
+    const a=p.life<=10?p.life/10:1;
+    ctx.save(); ctx.globalAlpha=a; ctx.shadowColor=C.poisonGlow; ctx.shadowBlur=10;
+    ctx.fillStyle=C.poison; ctx.beginPath();
+    ctx.roundRect(p.x*CELL+3,p.y*CELL+3,CELL-6,CELL-6,4); ctx.fill();
+    ctx.fillStyle=`rgba(255,255,255,${a*0.8})`; ctx.font=`${CELL-8}px monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('✕',p.x*CELL+CELL/2,p.y*CELL+CELL/2); ctx.restore();
+  });
 
-  // Direction — prevent 180° reversal
-  const { dir } = state;
-  if ((key === 'ArrowUp'    || key === 'w') && dir.y !== 1)  state.nextDir = { ...DIR.UP };
-  if ((key === 'ArrowDown'  || key === 's') && dir.y !== -1) state.nextDir = { ...DIR.DOWN };
-  if ((key === 'ArrowLeft'  || key === 'a') && dir.x !== 1)  state.nextDir = { ...DIR.LEFT };
-  if ((key === 'ArrowRight' || key === 'd') && dir.x !== -1) state.nextDir = { ...DIR.RIGHT };
-});
+  // Powerup
+  if (state.powerup) {
+    const icons={shield:'🛡',freeze:'❄',speed:'⚡'};
+    const a=state.powerup.life<=10?state.powerup.life/10:1;
+    const col={shield:C.shield,freeze:C.freeze,speed:C.speed}[state.powerup.type];
+    ctx.save(); ctx.globalAlpha=a; ctx.shadowColor=col; ctx.shadowBlur=14;
+    ctx.font=`${CELL}px monospace`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(icons[state.powerup.type],state.powerup.x*CELL+CELL/2,state.powerup.y*CELL+CELL/2);
+    ctx.restore();
+  }
 
-function togglePause() {
-  if (state.gameOver) return;
-  state.paused = !state.paused;
-  if (state.paused) {
-    showScreen('pause-screen');
-  } else {
-    hideAllScreens();
-    render();
+  // Food
+  if (state.food) {
+    ctx.save(); ctx.shadowColor=C.foodGlow; ctx.shadowBlur=14; ctx.fillStyle=C.food;
+    ctx.font=`${CELL-4}px monospace`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('★',state.food.x*CELL+CELL/2,state.food.y*CELL+CELL/2); ctx.restore();
+  }
+
+  // Hunter
+  state.hunter.forEach((s,i)=>{ if(!i)return; ctx.globalAlpha=Math.max(0.3,1-i*0.05); drawSeg(s,C.hunter,C.hunterScale,C.hunterDark,C.hunterGlow); ctx.globalAlpha=1; });
+  if (state.hunter.length) drawHead(state.hunter[0],state.hunterDir,C.hunter,C.hunterHead,C.hunterHead,C.hunterGlow);
+
+  // Player — shield flashes gold outline
+  if (state.shield) { ctx.save(); ctx.strokeStyle=C.shield; ctx.lineWidth=2; ctx.shadowColor=C.shield; ctx.shadowBlur=12; ctx.strokeRect(state.snake[0].x*CELL+1,state.snake[0].y*CELL+1,CELL-2,CELL-2); ctx.restore(); }
+  state.snake.forEach((s,i)=>{ if(!i)return; ctx.globalAlpha=Math.max(0.35,1-i*0.03); drawSeg(s,C.snake,C.snakeScale,C.snakeDark,C.snakeGlow); ctx.globalAlpha=1; });
+  drawHead(state.snake[0],state.dir,C.snake,'#fff',C.tongue,C.snakeGlow);
+
+  // Player name tag above head
+  ctx.save(); ctx.fillStyle='rgba(212,168,83,0.85)'; ctx.font=`bold 9px Cinzel,serif`;
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText(playerName, state.snake[0].x*CELL+CELL/2, state.snake[0].y*CELL-1); ctx.restore();
+}
+
+// Tint helpers
+function lighten(h,a){const n=parseInt(h.replace('#',''),16);return `rgb(${Math.min(255,(n>>16)+a)},${Math.min(255,((n>>8)&0xff)+a)},${Math.min(255,(n&0xff)+a)})`;}
+function darken(h,a){const n=parseInt(h.replace('#',''),16);return `rgb(${Math.max(0,(n>>16)-a)},${Math.max(0,((n>>8)&0xff)-a)},${Math.max(0,(n&0xff)-a)})`;}
+
+function drawSeg(seg,col,scaleCol,darkCol,glow) {
+  const x=seg.x*CELL, y=seg.y*CELL, cx=x+CELL/2, cy=y+CELL/2, r=CELL/2-1;
+  ctx.save(); ctx.shadowColor=glow; ctx.shadowBlur=8;
+  const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,1,cx,cy,r);
+  g.addColorStop(0,lighten(col,40)); g.addColorStop(0.4,col); g.addColorStop(1,darkCol);
+  ctx.fillStyle=g; ctx.beginPath(); ctx.roundRect(x+2,y+2,CELL-4,CELL-4,5); ctx.fill();
+  ctx.fillStyle=scaleCol; ctx.globalAlpha=0.3;
+  for(let sx=0;sx<2;sx++)for(let sy=0;sy<2;sy++){ctx.beginPath();ctx.ellipse(x+4+sx*(CELL-8)/2+3,y+4+sy*(CELL-8)/2+3,3.5,2.5,0,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1; ctx.restore();
+}
+
+function drawHead(seg,dir,col,eyeCol,tongueCol,glow) {
+  const x=seg.x*CELL,y=seg.y*CELL,cx=x+CELL/2,cy=y+CELL/2,r=CELL/2-1;
+  ctx.save(); ctx.shadowColor=glow; ctx.shadowBlur=18;
+  const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,1,cx,cy,r);
+  g.addColorStop(0,lighten(col,60)); g.addColorStop(0.5,col); g.addColorStop(1,darken(col,30));
+  ctx.fillStyle=g; ctx.beginPath(); ctx.roundRect(x+1,y+1,CELL-2,CELL-2,CELL/2); ctx.fill(); ctx.restore();
+  ctx.save();
+  const eo=3.5;
+  const eyes={1:{a:{x:cx+3,y:cy-eo},b:{x:cx+3,y:cy+eo}},'-1':{a:{x:cx-3,y:cy-eo},b:{x:cx-3,y:cy+eo}}};
+  const eyeY={1:{a:{x:cx-eo,y:cy+3},b:{x:cx+eo,y:cy+3}},'-1':{a:{x:cx-eo,y:cy-3},b:{x:cx+eo,y:cy-3}}};
+  const ep=dir.x?eyes[dir.x]:eyeY[dir.y];
+  if (ep) {
+    [ep.a,ep.b].forEach(e=>{
+      ctx.fillStyle='#fff'; ctx.shadowColor=eyeCol; ctx.shadowBlur=6;
+      ctx.beginPath(); ctx.arc(e.x,e.y,2.8,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#111'; ctx.shadowBlur=0;
+      ctx.beginPath(); ctx.arc(e.x+dir.x*0.5,e.y+dir.y*0.5,1.4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.8)';
+      ctx.beginPath(); ctx.arc(e.x-0.6,e.y-0.6,0.7,0,Math.PI*2); ctx.fill();
+    });
+  }
+  ctx.restore();
+  if (state.ticks%2===0) {
+    ctx.save(); ctx.strokeStyle=tongueCol; ctx.lineWidth=1.2; ctx.shadowColor=tongueCol; ctx.shadowBlur=6;
+    const tx=cx+dir.x*(r+4),ty=cy+dir.y*(r+4);
+    ctx.beginPath(); ctx.moveTo(cx+dir.x*r,cy+dir.y*r); ctx.lineTo(tx,ty); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+dir.x*3+dir.y*2,ty+dir.y*3+dir.x*2);
+    ctx.moveTo(tx,ty); ctx.lineTo(tx+dir.x*3-dir.y*2,ty+dir.y*3-dir.x*2); ctx.stroke();
+    ctx.restore();
   }
 }
 
-/* ── SCREEN SWITCHING ──────────────────────────── */
-document.getElementById('yes-btn').addEventListener('click', () => {
-  document.getElementById('welcome-screen').style.display = 'none';
-  document.getElementById('game-screen').style.display   = 'flex';
-  initGame();
-  state.running = true;
-  startLoop();
-  render();
-});
+function endGame(reason) {
+  state.over=true; state.running=false; clearInterval(state.timer); sfx.die();
+  if (state.score>state.best) { state.best=state.score; localStorage.setItem('venom_best',state.best); }
+  const board=saveBoard(state.score);
+  document.getElementById('gameover-title').textContent=state.score>=20?'IMPRESSIVE':state.score>=10?'FLATLINED':'TERMINATED';
+  document.getElementById('gameover-tag').textContent=state.hunterOn?'HUNTER WINS':'GAME OVER';
+  document.getElementById('gameover-msg').textContent=reason;
+  document.getElementById('final-score').textContent=String(state.score).padStart(3,'0');
+  document.getElementById('final-best').textContent=String(state.best).padStart(3,'0');
+  renderBoard(board);
+  showScreen('gameover-screen'); render();
+}
 
-document.getElementById('no-btn').addEventListener('click', () => {
-  document.getElementById('welcome-screen').style.display = 'none';
-  document.getElementById('goodbye-screen').style.display = 'flex';
-});
+function showScreen(id){['pause-screen','gameover-screen'].forEach(s=>{document.getElementById(s).style.display=s===id?'flex':'none';});}
+function hideAll(){['pause-screen','gameover-screen'].forEach(s=>{document.getElementById(s).style.display='none';});}
 
-document.getElementById('return-btn').addEventListener('click', () => {
-  document.getElementById('goodbye-screen').style.display = 'none';
-  document.getElementById('welcome-screen').style.display = 'flex';
-});
+function go(screen) {
+  ['welcome-screen','game-screen','goodbye-screen'].forEach(s=>{
+    document.getElementById(s).style.display=s===screen?'flex':'none';
+  });
+}
 
-document.getElementById('resume-btn').addEventListener('click', () => {
-  state.paused = false;
-  hideAllScreens();
-  render();
-});
-
-document.getElementById('restart-btn').addEventListener('click', () => {
-  hideAllScreens();
-  initGame();
-  state.running = true;
-  startLoop();
-  render();
-});
-
-document.getElementById('quit-btn').addEventListener('click', () => {
-  clearInterval(state.tickTimer);
-  document.getElementById('game-screen').style.display   = 'none';
-  document.getElementById('welcome-screen').style.display = 'flex';
-});
-
-/* ── MOBILE SWIPE ──────────────────────────────── */
-let touchStart = null;
-
-// Prevent page scrolling while playing on mobile
-document.addEventListener('touchmove', e => {
-  if (state.running && !state.paused) e.preventDefault();
-}, { passive: false });
-
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
-  touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-}, { passive: false });
-
-canvas.addEventListener('touchend', e => {
-  e.preventDefault();
-  if (!touchStart || !state.running || state.paused) return;
-  const dx = e.changedTouches[0].clientX - touchStart.x;
-  const dy = e.changedTouches[0].clientY - touchStart.y;
-  const { dir } = state;
-
-  if (Math.abs(dx) > Math.abs(dy)) {
-    if (dx > 20  && dir.x !== -1) state.nextDir = { ...DIR.RIGHT };
-    if (dx < -20 && dir.x !==  1) state.nextDir = { ...DIR.LEFT };
-  } else {
-    if (dy > 20  && dir.y !== -1) state.nextDir = { ...DIR.DOWN };
-    if (dy < -20 && dir.y !==  1) state.nextDir = { ...DIR.UP };
+// Input
+document.addEventListener('keydown',e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+  if(!state.running)return;
+  if(e.key==='p'||e.key==='P'||e.key==='Escape'){
+    state.paused=!state.paused;
+    state.paused?showScreen('pause-screen'):(hideAll(),render());
+    return;
   }
-  touchStart = null;
-}, { passive: false });
+  if(state.paused||state.over)return;
+  const d=state.dir;
+  if((e.key==='ArrowUp'   ||e.key==='w')&&d.y!==1)  state.next={...DIR.UP};
+  if((e.key==='ArrowDown' ||e.key==='s')&&d.y!==-1) state.next={...DIR.DOWN};
+  if((e.key==='ArrowLeft' ||e.key==='a')&&d.x!==1)  state.next={...DIR.LEFT};
+  if((e.key==='ArrowRight'||e.key==='d')&&d.x!==-1) state.next={...DIR.RIGHT};
+});
 
-/* ── READY ─────────────────────────────────────── */
-// Game starts when player clicks Yes on the welcome screen
+// Buttons
+document.getElementById('yes-btn').addEventListener('click',()=>{
+  const n=document.getElementById('player-name-input');
+  if(n&&n.value.trim()) playerName=n.value.trim().toUpperCase().slice(0,6);
+  go('game-screen'); init();
+});
+document.getElementById('no-btn').addEventListener('click',()=>go('goodbye-screen'));
+document.getElementById('return-btn').addEventListener('click',()=>go('welcome-screen'));
+document.getElementById('resume-btn').addEventListener('click',()=>{state.paused=false;hideAll();render();});
+document.getElementById('restart-btn').addEventListener('click',()=>{hideAll();go('game-screen');init();});
+document.getElementById('quit-btn').addEventListener('click',()=>{clearInterval(state.timer);go('welcome-screen');});
+
+// Touch
+let touch=null;
+document.addEventListener('touchmove',e=>{if(state.running&&!state.paused)e.preventDefault();},{passive:false});
+canvas.addEventListener('touchstart',e=>{e.preventDefault();touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:false});
+canvas.addEventListener('touchend',e=>{
+  e.preventDefault(); if(!touch||!state.running||state.paused)return;
+  const dx=e.changedTouches[0].clientX-touch.x, dy=e.changedTouches[0].clientY-touch.y, d=state.dir;
+  if(Math.abs(dx)>Math.abs(dy)){if(dx>20&&d.x!==-1)state.next={...DIR.RIGHT};if(dx<-20&&d.x!==1)state.next={...DIR.LEFT};}
+  else{if(dy>20&&d.y!==-1)state.next={...DIR.DOWN};if(dy<-20&&d.y!==1)state.next={...DIR.UP};}
+  touch=null;
+},{passive:false});
