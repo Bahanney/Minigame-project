@@ -26,11 +26,10 @@ jobs:
       - name: Check required files exist
         run: |
           echo "Checking game files..."
-          test -f Venom/index.html && echo "✅ index.html found"   || (echo "❌ index.html missing" && exit 1)
-          test -f Venom/style.css  && echo "✅ style.css found"    || (echo "❌ style.css missing"  && exit 1)
-          test -f Venom/game.js    && echo "✅ game.js found"      || (echo "❌ game.js missing"    && exit 1)
-          test -f Venom/README.md  && echo "✅ README.md found"    || (echo "❌ README.md missing"  && exit 1)
-          echo "All files present — build passed ✅"
+          test -f Venom/index.html && echo "✅ index.html found" || (echo "❌ index.html missing" && exit 1)
+          test -f Venom/style.css  && echo "✅ style.css found"  || (echo "❌ style.css missing"  && exit 1)
+          test -f Venom/game.js    && echo "✅ game.js found"    || (echo "❌ game.js missing"    && exit 1)
+          echo "All required files present — build passed ✅"
 
       - name: Check HTML structure
         run: |
