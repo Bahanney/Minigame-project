@@ -11,20 +11,34 @@
 
   <!-- WELCOME SCREEN -->
   <div id="welcome-screen" class="screen welcome-screen">
-    <div class="blood-drip"></div>
     <div class="welcome-content">
-      <div class="skull">💀</div>
+      <!-- SVG Snake -->
+      <div class="snake-hero">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 20 75 Q 10 60 20 45 Q 32 28 50 35 Q 70 42 72 58 Q 74 72 60 78 Q 44 84 38 70 Q 34 58 46 52 Q 58 46 62 56"
+                fill="none" stroke="#5bbf9a" stroke-width="9" stroke-linecap="round"/>
+          <path d="M 20 75 Q 10 60 20 45 Q 32 28 50 35 Q 70 42 72 58 Q 74 72 60 78 Q 44 84 38 70 Q 34 58 46 52 Q 58 46 62 56"
+                fill="none" stroke="#a0dfc0" stroke-width="2" stroke-linecap="round" stroke-dasharray="3,4" opacity="0.4"/>
+          <ellipse cx="65" cy="50" rx="9" ry="7" fill="#5bbf9a"/>
+          <ellipse cx="65" cy="50" rx="7" ry="5.5" fill="#4aaa87"/>
+          <circle cx="69" cy="48" r="2.2" fill="white"/>
+          <circle cx="69.5" cy="48" r="1.1" fill="#0a0810"/>
+          <circle cx="68.8" cy="47.5" r="0.5" fill="white" opacity="0.8"/>
+        </svg>
+      </div>
+      <div class="welcome-best" id="welcome-best"></div>
       <h1 class="welcome-title">VENOM</h1>
-      <p class="welcome-tagline">Something is waiting in the dark.</p>
+      <p class="welcome-tagline">The snake that thinks.</p>
+      <div class="welcome-divider"></div>
       <div class="challenge-box">
         <p>Can you <span class="highlight-gold">defeat the Hunter</span>?<br/>
            Can you <span class="highlight-rose">avoid the Poison</span>?<br/>
-           <em>It learns. It adapts. It does not stop.</em></p>
+           <em>It learns your moves. It does not stop.</em></p>
       </div>
-      <input id="player-name-input" class="name-input" type="text" maxlength="6" placeholder="Your name (6 chars)"/>
+      <input id="player-name-input" class="name-input" type="text" maxlength="6" placeholder="Enter your name"/>
       <div class="welcome-buttons">
-        <button class="btn-yes" id="yes-btn">⚔ Yes, I'm Ready</button>
-        <button class="btn-no"  id="no-btn">🕯 No, Take Me Back</button>
+        <button class="btn-yes" id="yes-btn">Play →</button>
+        <button class="btn-no"  id="no-btn">Exit</button>
       </div>
     </div>
     <div class="welcome-footer">Enter if you dare</div>
@@ -81,7 +95,7 @@
         </div>
       </div>
       <div class="legend">
-        <div class="legend-item"><span class="legend-icon">🐍</span> Your Snake</div>
+        <div class="legend-item"><span class="legend-icon">🐍</span> You</div>
         <div class="legend-item"><span class="legend-icon">★</span> Food</div>
         <div class="legend-item"><span class="legend-icon" style="color:#c4687a">✕</span> Poison</div>
         <div class="legend-item"><span class="legend-icon">☠</span> Hunter</div>

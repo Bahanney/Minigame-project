@@ -320,14 +320,27 @@ function render() {
     ctx.fillText('✕',offX+p.x*CELL+CELL/2,offY+p.y*CELL+CELL/2); ctx.restore();
   });
 
-  // Powerup
+  // Powerup — bright glowing tile with pulsing ring
   if (state.powerup) {
     const icons={shield:'🛡',freeze:'❄',speed:'⚡'};
+    const cols={shield:C.shield,freeze:C.freeze,speed:C.speed};
     const a=state.powerup.life<=10?state.powerup.life/10:1;
-    const col={shield:C.shield,freeze:C.freeze,speed:C.speed}[state.powerup.type];
-    ctx.save(); ctx.globalAlpha=a; ctx.shadowColor=col; ctx.shadowBlur=14;
-    ctx.font=`${CELL}px monospace`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(icons[state.powerup.type],offX+state.powerup.x*CELL+CELL/2,offY+state.powerup.y*CELL+CELL/2);
+    const col=cols[state.powerup.type];
+    const px=offX+state.powerup.x*CELL, py=offY+state.powerup.y*CELL;
+    const cx=px+CELL/2, cy=py+CELL/2;
+    ctx.save();
+    // Glowing background tile
+    ctx.globalAlpha=a*0.9; ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=30;
+    ctx.beginPath(); ctx.roundRect(px+1,py+1,CELL-2,CELL-2,6); ctx.fill();
+    // Pulsing outer ring
+    const ring=(state.ticks%20)/20;
+    ctx.globalAlpha=a*(0.6-ring*0.55); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.shadowBlur=20;
+    ctx.beginPath(); ctx.arc(cx,cy,CELL/2+ring*CELL*0.55,0,Math.PI*2); ctx.stroke();
+    // Dark icon on bright background
+    ctx.globalAlpha=a; ctx.shadowBlur=0;
+    ctx.font=`bold ${CELL-5}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#050310';
+    ctx.fillText(icons[state.powerup.type],cx,cy+1);
     ctx.restore();
   }
 
@@ -409,10 +422,15 @@ function endGame(reason) {
 function showScreen(id){['pause-screen','gameover-screen'].forEach(s=>{document.getElementById(s).style.display=s===id?'flex':'none';});}
 function hideAll(){['pause-screen','gameover-screen'].forEach(s=>{document.getElementById(s).style.display='none';});}
 
-function go(screen) {
+function go(id) {
   ['welcome-screen','game-screen','goodbye-screen'].forEach(s=>{
-    document.getElementById(s).style.display=s===screen?'flex':'none';
+    document.getElementById(s).style.display=s===id?'flex':'none';
   });
+  if (id==='welcome-screen') {
+    const best=localStorage.getItem('venom_best')||'0';
+    const el=document.getElementById('welcome-best');
+    if (el) el.textContent = parseInt(best)>0 ? `Best Score: ${best}` : '';
+  }
 }
 
 // Input
