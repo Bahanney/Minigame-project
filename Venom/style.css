@@ -19,111 +19,105 @@ body { background: var(--bg); color: var(--cream); font-family: 'Cormorant Garam
 
 .screen { width: 100%; height: 100vh; height: 100dvh; position: absolute; top: 0; left: 0; }
 
-/* ── WELCOME ─────────────────────────────────────── */
+/* ── WELCOME — Cinematic splash screen ───────────────── */
 .welcome-screen {
-  background: #070510;
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; overflow-y: auto; padding: 32px 20px;
-  position: relative;
+  background: #020304;
+  display: flex; flex-direction: column;
+  align-items: stretch; justify-content: space-between;
+  position: relative; overflow: hidden;
+  padding: 0;
 }
-/* Animated grid background */
-.welcome-screen::before {
-  content: '';
+.hero-canvas {
   position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(91,191,154,0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(91,191,154,0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
-  animation: gridShift 8s linear infinite;
-  pointer-events: none;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
 }
-/* Corner accent lines */
-.welcome-screen::after {
-  content: '';
-  position: absolute; inset: 16px;
-  border: 1px solid rgba(91,191,154,0.08);
-  pointer-events: none;
-}
-@keyframes gridShift { from{background-position:0 0;} to{background-position:32px 32px;} }
 
-.welcome-content {
+/* ── TOP — Title zone ─── */
+.splash-top {
+  position: relative; z-index: 2;
   display: flex; flex-direction: column; align-items: center;
-  text-align: center; max-width: 440px; width: 100%; gap: 16px;
-  position: relative; z-index: 1;
+  padding: clamp(18px,4vh,40px) 20px 0;
+  text-align: center;
+  /* Gradient fade so title sits over dark top, not over bright snake */
+  background: linear-gradient(to bottom, rgba(2,3,4,0.82) 0%, rgba(2,3,4,0.4) 70%, transparent 100%);
 }
-/* Animated SVG snake */
-.snake-hero {
-  width: 80px; height: 80px;
-  animation: sway 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 20px rgba(91,191,154,0.7));
+.splash-best {
+  font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 6px;
+  color: rgba(212,168,83,0.55); text-transform: uppercase; min-height: 14px;
+  margin-bottom: 4px;
 }
-.snake-hero svg { width: 100%; height: 100%; display: block; }
-@keyframes sway { 0%,100%{transform:rotate(-5deg);} 50%{transform:rotate(5deg);} }
-
-/* Score strip — shows current best above title */
-.welcome-best {
-  font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 5px;
-  color: var(--gold-dim); text-transform: uppercase;
-}
-
-.welcome-title {
+.splash-title {
   font-family: 'Cinzel Decorative', 'Cinzel', serif;
-  font-size: clamp(44px, 12vw, 80px); font-weight: 700; letter-spacing: 10px; line-height: 1;
-  background: linear-gradient(150deg, #ffffff 0%, #5bbf9a 40%, #d4a853 100%);
+  font-size: clamp(52px, 14vw, 110px); font-weight: 700;
+  letter-spacing: clamp(8px, 2vw, 20px); line-height: 1;
+  margin: 0;
+  /* Stone/metal engraved look like reference */
+  background: linear-gradient(180deg,
+    #ffffff 0%,
+    #e8d5a0 20%,
+    #c8a84a 45%,
+    #8a6520 70%,
+    #5a4010 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  filter: drop-shadow(0 0 30px rgba(91,191,154,0.3));
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.9)) drop-shadow(0 0 40px rgba(200,160,60,0.3));
 }
-.welcome-tagline {
-  font-size: 10px; letter-spacing: 5px; color: var(--mint);
-  text-transform: uppercase; opacity: 0.7;
+.splash-sub {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(8px, 1.8vw, 13px); letter-spacing: clamp(4px, 1.5vw, 10px);
+  color: rgba(200,160,80,0.65); text-transform: uppercase; margin: 8px 0 0;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.9);
 }
-/* Divider */
-.welcome-divider {
-  width: 100%; max-width: 260px; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--mint), transparent);
-  opacity: 0.3;
+
+/* ── BOTTOM — Controls zone ─── */
+.splash-bottom {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 0 20px clamp(16px,4vh,36px);
+  /* Gradient fade — controls sit over dark bottom */
+  background: linear-gradient(to top, rgba(2,3,4,0.92) 0%, rgba(2,3,4,0.55) 60%, transparent 100%);
 }
-.challenge-box {
-  border: 1px solid rgba(91,191,154,0.15);
-  border-left: 2px solid var(--mint);
-  background: rgba(91,191,154,0.05);
-  padding: 14px 22px; width: 100%; max-width: 360px;
-  position: relative;
-}
-/* Corner dots on challenge box */
-.challenge-box::before, .challenge-box::after {
-  content: ''; position: absolute; width: 6px; height: 6px;
-  border-color: var(--mint); border-style: solid; opacity: 0.4;
-}
-.challenge-box::before { top:-1px; left:-1px; border-width: 1px 0 0 1px; }
-.challenge-box::after  { bottom:-1px; right:-1px; border-width: 0 1px 1px 0; }
-.challenge-box p { font-size: 13px; line-height: 1.95; color: var(--cream-dim); font-style: italic; }
-.highlight-gold { color: var(--gold); font-style: normal; font-weight: 600; }
-.highlight-rose { color: var(--rose); font-style: normal; font-weight: 600; }
 .name-input {
-  font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 3px;
-  padding: 10px 18px; background: rgba(91,191,154,0.04);
-  border: 1px solid rgba(91,191,154,0.25); color: var(--mint);
-  text-align: center; text-transform: uppercase; outline: none; width: 210px; transition: all 0.2s;
+  font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 4px;
+  padding: 9px 20px; width: min(260px, 80vw);
+  background: rgba(5,8,5,0.75); backdrop-filter: blur(8px);
+  border: 1px solid rgba(91,191,154,0.3); border-bottom: 2px solid rgba(91,191,154,0.5);
+  color: #a0e8c0; text-align: center; text-transform: uppercase; outline: none;
+  transition: all 0.2s;
 }
-.name-input::placeholder { color: rgba(91,191,154,0.3); }
-.name-input:focus { border-color: var(--mint); background: rgba(91,191,154,0.08); }
-.welcome-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.name-input::placeholder { color: rgba(91,191,154,0.25); }
+.name-input:focus { border-color: rgba(91,191,154,0.7); background: rgba(5,15,8,0.9); }
+.splash-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* PLAY button — wide metallic bar like "PRESS START" in the reference */
 .btn-yes {
-  font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700; letter-spacing: 4px;
-  padding: 13px 34px;
-  background: var(--mint);
-  border: none; color: #070510; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
-  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  font-family: 'Cinzel', serif; font-size: clamp(11px,2.5vw,14px);
+  font-weight: 700; letter-spacing: 6px;
+  padding: 14px clamp(28px,6vw,52px);
+  background: linear-gradient(180deg, rgba(91,191,154,0.15) 0%, rgba(30,80,50,0.4) 100%);
+  border: 1px solid rgba(91,191,154,0.5); border-bottom: 2px solid rgba(91,191,154,0.7);
+  color: #a0e8c0; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+  backdrop-filter: blur(6px);
+  text-shadow: 0 0 12px rgba(91,191,154,0.6);
 }
-.btn-yes:hover { background: #7ddbb8; transform: scale(1.03); box-shadow: 0 0 24px rgba(91,191,154,0.4); }
+.btn-yes:hover {
+  background: linear-gradient(180deg, rgba(91,191,154,0.3) 0%, rgba(40,120,70,0.5) 100%);
+  border-color: rgba(91,191,154,0.9); color: #d0fff0;
+  box-shadow: 0 0 24px rgba(91,191,154,0.3), inset 0 0 12px rgba(91,191,154,0.1);
+}
+/* EXIT button — smaller, muted */
 .btn-no {
-  font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px; padding: 13px 28px;
-  background: transparent; border: 1px solid rgba(138,125,106,0.25);
-  color: var(--cream-dim); cursor: pointer; transition: all 0.25s; text-transform: uppercase;
+  font-family: 'Cinzel', serif; font-size: clamp(9px,2vw,11px); letter-spacing: 4px;
+  padding: 14px clamp(16px,4vw,30px);
+  background: rgba(5,5,5,0.6); backdrop-filter: blur(4px);
+  border: 1px solid rgba(100,80,50,0.35); color: rgba(160,140,100,0.6);
+  cursor: pointer; transition: all 0.2s; text-transform: uppercase;
 }
-.btn-no:hover { border-color: var(--cream-dim); color: var(--cream); letter-spacing: 4px; }
-.welcome-footer { position: absolute; bottom: 16px; font-size: 9px; letter-spacing: 4px; color: rgba(91,191,154,0.2); font-style: italic; }
+.btn-no:hover { border-color: rgba(160,140,100,0.6); color: rgba(200,180,130,0.85); }
+.splash-hint {
+  font-size: 8px; letter-spacing: 3px; color: rgba(100,120,100,0.35);
+  font-style: italic; margin: 0;
+}
 
 /* ── GAME SCREEN ─────────────────────────────────── */
 .game-screen {
@@ -283,15 +277,9 @@ footer { flex-shrink: 0; font-size: 8px; letter-spacing: 2px; color: rgba(138,12
   .stat-value { font-size: 13px; }
   .legend { font-size: 8px; gap: 6px; }
   footer { display: none; }
-  /* Welcome screen on short phones */
-  .welcome-content { gap: 10px; }
-  .snake-hero { width: 56px; height: 56px; }
-  .welcome-title { font-size: clamp(32px, 9vw, 52px); }
-  .welcome-divider { display: none; }
-  .challenge-box { padding: 10px 16px; }
-  .challenge-box p { font-size: 12px; line-height: 1.8; }
-  .name-input { padding: 8px 14px; }
-  .btn-yes, .btn-no { padding: 10px 22px; font-size: 10px; }
+  /* Splash screen on short phones */
+  .splash-title { font-size: clamp(38px, 10vw, 64px); letter-spacing: 8px; }
+  .splash-sub { display: none; }
+  .splash-hint { display: none; }
 }
-@media (max-width: 360px) { .stat-value { font-size: 12px; } }
 @media (max-width: 360px) { .stat-value { font-size: 12px; } }

@@ -429,7 +429,7 @@ function go(id) {
   if (id==='welcome-screen') {
     const best=localStorage.getItem('venom_best')||'0';
     const el=document.getElementById('welcome-best');
-    if (el) el.textContent = parseInt(best)>0 ? `Best Score: ${best}` : '';
+    if (el) el.textContent = parseInt(best)>0 ? `Best · ${best}` : '';
   }
 }
 
@@ -474,3 +474,421 @@ canvas.addEventListener('touchend',e=>{
   else{if(dy>20&&d.y!==-1)state.next={...DIR.DOWN};if(dy<-20&&d.y!==1)state.next={...DIR.UP};}
   touch=null;
 },{passive:false});
+
+
+// ── HERO CANVAS — Cinematic welcome screen ─────────────────────────────────
+(function () {
+  const hc = document.getElementById('hero-canvas');
+  const hx = hc.getContext('2d');
+  let hw, hh, hf = 0;
+
+  function resize() {
+    hw = hc.width  = hc.offsetWidth;
+    hh = hc.height = hc.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ── Helpers ──────────────────────────────────────────
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+  // ── Background: deep dark jungle/void ────────────────
+  function drawBg() {
+    // Base dark gradient — deep greens at edges, near black center
+    const bg = hx.createRadialGradient(hw*0.5, hh*0.6, hh*0.1, hw*0.5, hh*0.5, hh*0.9);
+    bg.addColorStop(0,   '#060a06');
+    bg.addColorStop(0.4, '#04080a');
+    bg.addColorStop(0.75,'#080510');
+    bg.addColorStop(1,   '#020304');
+    hx.fillStyle = bg; hx.fillRect(0, 0, hw, hh);
+
+    // Vignette — heavy darkness at all edges
+    const vig = hx.createRadialGradient(hw*0.5, hh*0.45, hh*0.15, hw*0.5, hh*0.5, hh*0.8);
+    vig.addColorStop(0,   'rgba(0,0,0,0)');
+    vig.addColorStop(0.6, 'rgba(0,0,0,0.3)');
+    vig.addColorStop(1,   'rgba(0,0,0,0.88)');
+    hx.fillStyle = vig; hx.fillRect(0, 0, hw, hh);
+
+    // Ambient green glow behind snake — like undergrowth light
+    const glow = hx.createRadialGradient(hw*0.5, hh*0.62, 0, hw*0.5, hh*0.62, hw*0.45);
+    glow.addColorStop(0,   'rgba(30,80,20,0.22)');
+    glow.addColorStop(0.5, 'rgba(10,40,10,0.1)');
+    glow.addColorStop(1,   'rgba(0,0,0,0)');
+    hx.fillStyle = glow; hx.fillRect(0, 0, hw, hh);
+  }
+
+  // ── Fog layers ────────────────────────────────────────
+  const fogLayers = [
+    { y: 0.72, speed: 0.00018, offset: 0,    alpha: 0.18, h: 0.22 },
+    { y: 0.80, speed: 0.00010, offset: 0.4,  alpha: 0.24, h: 0.28 },
+    { y: 0.88, speed: 0.00006, offset: 0.7,  alpha: 0.30, h: 0.22 },
+  ];
+  function drawFog(t) {
+    fogLayers.forEach(f => {
+      const ox = ((t * f.speed) % 1) * hw;
+      const gy = hh * f.y;
+      hx.save();
+      for (let pass = 0; pass < 2; pass++) {
+        const xOff = pass === 0 ? -ox : hw - ox;
+        const fog = hx.createLinearGradient(0, gy - hh*0.04, 0, gy + hh*f.h);
+        fog.addColorStop(0, `rgba(140,180,130,0)`);
+        fog.addColorStop(0.2, `rgba(140,180,130,${f.alpha})`);
+        fog.addColorStop(0.6, `rgba(100,140,90,${f.alpha * 0.6})`);
+        fog.addColorStop(1, 'rgba(0,0,0,0)');
+        hx.fillStyle = fog;
+        hx.fillRect(xOff, gy - hh*0.04, hw, hh * (f.h + 0.08));
+      }
+      hx.restore();
+    });
+  }
+
+  // ── Jungle vines / branches (left & right) ────────────
+  function drawVines() {
+    hx.save();
+    // Left branch cluster
+    hx.strokeStyle = 'rgba(20,50,15,0.7)';
+    hx.lineWidth = 18; hx.lineCap = 'round';
+    hx.shadowColor = 'rgba(0,0,0,0.8)'; hx.shadowBlur = 20;
+    hx.beginPath(); hx.moveTo(-hw*0.01, hh*0.1); hx.bezierCurveTo(hw*0.06, hh*0.35, hw*0.02, hh*0.55, hw*0.08, hh*0.85); hx.stroke();
+    hx.lineWidth = 10;
+    hx.beginPath(); hx.moveTo(hw*0.04, 0); hx.bezierCurveTo(hw*0.12, hh*0.25, hw*0.05, hh*0.5, hw*0.12, hh*0.7); hx.stroke();
+    hx.lineWidth = 6;
+    hx.beginPath(); hx.moveTo(hw*0.09, hh*0.05); hx.bezierCurveTo(hw*0.18, hh*0.3, hw*0.1, hh*0.45, hw*0.16, hh*0.65); hx.stroke();
+    // Hanging vine left
+    hx.lineWidth = 4; hx.strokeStyle = 'rgba(30,70,20,0.5)';
+    hx.beginPath(); hx.moveTo(hw*0.12, 0); hx.bezierCurveTo(hw*0.15, hh*0.3, hw*0.11, hh*0.5, hw*0.14, hh*0.8); hx.stroke();
+
+    // Right branch cluster
+    hx.strokeStyle = 'rgba(20,50,15,0.7)';
+    hx.lineWidth = 16;
+    hx.beginPath(); hx.moveTo(hw*1.01, hh*0.08); hx.bezierCurveTo(hw*0.94, hh*0.3, hw*0.97, hh*0.55, hw*0.91, hh*0.82); hx.stroke();
+    hx.lineWidth = 9;
+    hx.beginPath(); hx.moveTo(hw*0.96, 0); hx.bezierCurveTo(hw*0.88, hh*0.22, hw*0.94, hh*0.48, hw*0.87, hh*0.68); hx.stroke();
+    hx.lineWidth = 5;
+    hx.beginPath(); hx.moveTo(hw*0.91, hh*0.03); hx.bezierCurveTo(hw*0.83, hh*0.28, hw*0.89, hh*0.46, hw*0.84, hh*0.62); hx.stroke();
+    hx.lineWidth = 3; hx.strokeStyle = 'rgba(30,70,20,0.5)';
+    hx.beginPath(); hx.moveTo(hw*0.87, 0); hx.bezierCurveTo(hw*0.85, hh*0.28, hw*0.88, hh*0.5, hw*0.85, hh*0.78); hx.stroke();
+
+    // Moss patches — left edge
+    hx.fillStyle = 'rgba(25,65,18,0.6)';
+    hx.shadowColor = 'rgba(0,0,0,0.5)'; hx.shadowBlur = 15;
+    hx.beginPath(); hx.ellipse(hw*0.03, hh*0.5, hw*0.06, hh*0.12, 0.3, 0, Math.PI*2); hx.fill();
+    hx.beginPath(); hx.ellipse(hw*0.06, hh*0.65, hw*0.05, hh*0.09, -0.2, 0, Math.PI*2); hx.fill();
+    // Moss patches — right edge
+    hx.beginPath(); hx.ellipse(hw*0.97, hh*0.48, hw*0.06, hh*0.11, -0.3, 0, Math.PI*2); hx.fill();
+    hx.beginPath(); hx.ellipse(hw*0.94, hh*0.63, hw*0.05, hh*0.09, 0.2, 0, Math.PI*2); hx.fill();
+    hx.restore();
+  }
+
+  // ── Water surface at base ─────────────────────────────
+  function drawWater(t) {
+    hx.save();
+    const wy = hh * 0.78;
+    // Dark water body
+    const wg = hx.createLinearGradient(0, wy, 0, hh);
+    wg.addColorStop(0, 'rgba(8,20,12,0.9)');
+    wg.addColorStop(1, 'rgba(2,6,4,0.98)');
+    hx.fillStyle = wg; hx.fillRect(0, wy, hw, hh - wy);
+
+    // Ripple lines
+    hx.strokeStyle = 'rgba(80,140,70,0.12)'; hx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const ry = wy + hh * 0.03 * i;
+      const rx = ((t * 0.0002 + i * 0.2) % 1) * hw;
+      hx.beginPath(); hx.moveTo(rx - hw*0.3, ry); hx.bezierCurveTo(rx - hw*0.1, ry - 3, rx + hw*0.1, ry + 2, rx + hw*0.4, ry); hx.stroke();
+    }
+
+    // Water glow from snake splash
+    const sg = hx.createRadialGradient(hw*0.5, wy, 0, hw*0.5, wy, hw*0.35);
+    sg.addColorStop(0,   'rgba(60,120,50,0.25)');
+    sg.addColorStop(0.5, 'rgba(20,60,20,0.08)');
+    sg.addColorStop(1,   'rgba(0,0,0,0)');
+    hx.fillStyle = sg; hx.fillRect(0, wy - hh*0.05, hw, hh*0.2);
+    hx.restore();
+  }
+
+  // ── Splash droplets ───────────────────────────────────
+  const droplets = Array.from({length: 14}, (_, i) => ({
+    angle: (i / 14) * Math.PI + Math.PI * 0.1,
+    speed: 0.004 + Math.random() * 0.006,
+    len:   0.04 + Math.random() * 0.08,
+    phase: Math.random() * Math.PI * 2,
+  }));
+  function drawSplash(t) {
+    hx.save();
+    const ox = hw * 0.5, oy = hh * 0.78;
+    droplets.forEach(d => {
+      const p = (Math.sin(t * d.speed + d.phase) * 0.5 + 0.5);
+      const dist = p * hw * 0.22;
+      const ex = ox + Math.cos(d.angle) * dist;
+      const ey = oy + Math.sin(d.angle + 0.3) * dist * 0.4 - p * hh * 0.06;
+      hx.globalAlpha = (1 - p) * 0.5;
+      hx.strokeStyle = 'rgba(180,220,160,0.9)';
+      hx.lineWidth = 1.5;
+      hx.beginPath();
+      hx.moveTo(ex, ey);
+      hx.lineTo(ex + Math.cos(d.angle)*hh*d.len*0.15*(1-p), ey - hh*0.03*p);
+      hx.stroke();
+    });
+    hx.globalAlpha = 1;
+    hx.restore();
+  }
+
+  // ── Snake body coil ───────────────────────────────────
+  function drawCoil(riseY) {
+    hx.save();
+    const cx = hw * 0.5, cy = hh * (0.62 + riseY * 0.1);
+    const rx = hw * 0.28, ry = hh * 0.09;
+
+    // Shadow under coil
+    hx.shadowColor = 'rgba(0,0,0,0)'; hx.shadowBlur = 0;
+    const sh = hx.createRadialGradient(cx, cy + ry*1.2, 0, cx, cy + ry*1.2, rx*1.1);
+    sh.addColorStop(0, 'rgba(0,0,0,0.55)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+    hx.fillStyle = sh; hx.beginPath(); hx.ellipse(cx, cy + ry*1.3, rx*1.1, ry*0.7, 0, 0, Math.PI*2); hx.fill();
+
+    // Coil — drawn as thick arc with scale texture
+    const coilSegs = 48;
+    for (let i = 0; i < coilSegs; i++) {
+      const a0 = (i / coilSegs) * Math.PI * 2;
+      const a1 = ((i + 1) / coilSegs) * Math.PI * 2;
+      const t = i / coilSegs;
+      // Thickness varies around coil
+      const thick = hw * 0.045 * (0.7 + 0.3 * Math.sin(t * Math.PI));
+      const x0 = cx + Math.cos(a0) * rx, y0 = cy + Math.sin(a0) * ry;
+      const x1 = cx + Math.cos(a1) * rx, y1 = cy + Math.sin(a1) * ry;
+      // Scale colour — dark olive-green like a real python
+      const shade = 0.3 + 0.45 * Math.abs(Math.sin(t * Math.PI * 6));
+      const gr = Math.floor(40 + shade * 60);
+      const gg = Math.floor(55 + shade * 70);
+      const gb = Math.floor(15 + shade * 25);
+      hx.strokeStyle = `rgb(${gr},${gg},${gb})`;
+      hx.lineWidth = thick;
+      hx.lineCap = 'round';
+      hx.shadowColor = 'rgba(0,0,0,0.6)'; hx.shadowBlur = 8;
+      hx.beginPath(); hx.moveTo(x0, y0); hx.lineTo(x1, y1); hx.stroke();
+    }
+    // Belly stripe along bottom of coil
+    hx.strokeStyle = 'rgba(180,160,80,0.25)'; hx.lineWidth = hw * 0.018;
+    hx.shadowBlur = 0;
+    hx.beginPath();
+    for (let i = 0; i <= 32; i++) {
+      const a = Math.PI * 0.1 + (i / 32) * Math.PI * 0.8;
+      const x = cx + Math.cos(a) * rx * 0.92, y = cy + Math.sin(a) * ry * 1.15;
+      i === 0 ? hx.moveTo(x, y) : hx.lineTo(x, y);
+    }
+    hx.stroke();
+    hx.restore();
+  }
+
+  // ── Snake head rising ─────────────────────────────────
+  function drawHead(riseY) {
+    hx.save();
+    const cx = hw * 0.5;
+    // riseY goes 0→1 over time — head rises from water
+    const cy = hh * (0.78 - riseY * 0.38);
+    const headW = hw * 0.19, headH = hh * 0.24;
+
+    // Neck
+    const neckW = hw * 0.10;
+    hx.shadowColor = 'rgba(0,0,0,0.7)'; hx.shadowBlur = 20;
+    const neck = hx.createLinearGradient(cx - neckW, cy + headH*0.5, cx + neckW, cy + headH*0.5);
+    neck.addColorStop(0,   'rgb(25,40,10)');
+    neck.addColorStop(0.3, 'rgb(55,75,20)');
+    neck.addColorStop(0.5, 'rgb(70,90,25)');
+    neck.addColorStop(0.7, 'rgb(55,75,20)');
+    neck.addColorStop(1,   'rgb(25,40,10)');
+    hx.fillStyle = neck;
+    hx.beginPath();
+    hx.moveTo(cx - neckW, cy + headH * 0.6);
+    hx.bezierCurveTo(cx - neckW * 1.1, cy + headH, cx - neckW * 0.8, hh, cx - neckW * 0.7, hh);
+    hx.lineTo(cx + neckW * 0.7, hh);
+    hx.bezierCurveTo(cx + neckW * 0.8, hh, cx + neckW * 1.1, cy + headH, cx + neckW, cy + headH * 0.6);
+    hx.closePath(); hx.fill();
+
+    // Head shape — flattened teardrop, wider at jaw
+    const headPath = () => {
+      hx.beginPath();
+      hx.moveTo(cx, cy - headH * 0.52);
+      hx.bezierCurveTo(cx + headW * 0.65, cy - headH * 0.35, cx + headW, cy + headH * 0.05, cx + headW * 0.9, cy + headH * 0.4);
+      hx.bezierCurveTo(cx + headW * 0.75, cy + headH * 0.7, cx + headW * 0.5, cy + headH * 0.88, cx, cy + headH * 0.92);
+      hx.bezierCurveTo(cx - headW * 0.5, cy + headH * 0.88, cx - headW * 0.75, cy + headH * 0.7, cx - headW * 0.9, cy + headH * 0.4);
+      hx.bezierCurveTo(cx - headW, cy + headH * 0.05, cx - headW * 0.65, cy - headH * 0.35, cx, cy - headH * 0.52);
+      hx.closePath();
+    };
+
+    // Head shadow
+    hx.save(); hx.translate(hw * 0.01, hh * 0.015);
+    headPath(); hx.fillStyle = 'rgba(0,0,0,0.5)'; hx.fill(); hx.restore();
+
+    // Head base colour — dark python olive
+    const hg = hx.createRadialGradient(cx - headW*0.2, cy - headH*0.1, headW*0.1, cx, cy + headH*0.2, headW*1.1);
+    hg.addColorStop(0,   'rgb(80,100,35)');
+    hg.addColorStop(0.35,'rgb(60,80,22)');
+    hg.addColorStop(0.7, 'rgb(38,55,14)');
+    hg.addColorStop(1,   'rgb(18,28,6)');
+    headPath(); hx.fillStyle = hg; hx.shadowColor = 'rgba(0,0,0,0.8)'; hx.shadowBlur = 30; hx.fill();
+
+    // Scale pattern overlay — irregular dark patches like a python
+    hx.save(); hx.clip();
+    const patchCols = [
+      [cx - headW*0.3, cy - headH*0.1, headW*0.22, headH*0.14],
+      [cx + headW*0.15, cy - headH*0.05, headW*0.18, headH*0.12],
+      [cx - headW*0.1, cy + headH*0.18, headW*0.25, headH*0.13],
+      [cx + headW*0.35, cy + headH*0.1, headW*0.15, headH*0.1],
+      [cx - headW*0.45, cy + headH*0.05, headW*0.16, headH*0.1],
+      [cx + headW*0.05, cy + headH*0.38, headW*0.2, headH*0.12],
+      [cx - headW*0.25, cy + headH*0.3, headW*0.16, headH*0.1],
+    ];
+    patchCols.forEach(([px, py, pw, ph]) => {
+      hx.fillStyle = 'rgba(15,25,5,0.55)';
+      hx.beginPath(); hx.ellipse(px, py, pw, ph, Math.random() * 0.8 - 0.4, 0, Math.PI*2); hx.fill();
+    });
+    // Fine scale lines
+    hx.strokeStyle = 'rgba(100,130,40,0.18)'; hx.lineWidth = 0.8;
+    for (let i = 0; i < 12; i++) {
+      const sx = cx - headW*0.7 + i * headW*0.13;
+      hx.beginPath(); hx.moveTo(sx, cy - headH*0.3); hx.lineTo(sx - headW*0.04, cy + headH*0.5); hx.stroke();
+    }
+    hx.restore();
+
+    // Open jaw — mouth gaping open
+    const jawDrop = headH * 0.72;
+    // Upper jaw interior
+    hx.save();
+    hx.shadowBlur = 0;
+    const mouthPath = () => {
+      hx.beginPath();
+      hx.moveTo(cx - headW * 0.82, cy + headH * 0.38);
+      hx.bezierCurveTo(cx - headW * 0.6, cy + headH * 0.2, cx - headW * 0.2, cy + headH * 0.12, cx, cy + headH * 0.15);
+      hx.bezierCurveTo(cx + headW * 0.2, cy + headH * 0.12, cx + headW * 0.6, cy + headH * 0.2, cx + headW * 0.82, cy + headH * 0.38);
+      hx.bezierCurveTo(cx + headW * 0.7, cy + headH * 0.68 + jawDrop*0.15, cx + headW * 0.3, cy + headH * 0.75 + jawDrop*0.3, cx, cy + headH * 0.78 + jawDrop*0.35);
+      hx.bezierCurveTo(cx - headW * 0.3, cy + headH * 0.75 + jawDrop*0.3, cx - headW * 0.7, cy + headH * 0.68 + jawDrop*0.15, cx - headW * 0.82, cy + headH * 0.38);
+      hx.closePath();
+    };
+    mouthPath();
+    const mg = hx.createLinearGradient(cx, cy + headH*0.1, cx, cy + headH + jawDrop*0.4);
+    mg.addColorStop(0,   'rgb(120,30,30)');
+    mg.addColorStop(0.3, 'rgb(160,45,45)');
+    mg.addColorStop(0.7, 'rgb(80,15,15)');
+    mg.addColorStop(1,   'rgb(20,5,5)');
+    hx.fillStyle = mg; hx.fill();
+
+    // Throat darkness
+    const tg = hx.createRadialGradient(cx, cy + headH * 0.6 + jawDrop*0.25, hh*0.01, cx, cy + headH * 0.6 + jawDrop*0.25, headW*0.7);
+    tg.addColorStop(0,   'rgba(0,0,0,0.95)');
+    tg.addColorStop(0.5, 'rgba(15,5,5,0.6)');
+    tg.addColorStop(1,   'rgba(0,0,0,0)');
+    hx.fillStyle = tg; mouthPath(); hx.fill();
+
+    // Fangs
+    const fangData = [
+      { x: cx - headW*0.38, tip: jawDrop*0.55, w: headW*0.035 },
+      { x: cx + headW*0.38, tip: jawDrop*0.55, w: headW*0.035 },
+      { x: cx - headW*0.22, tip: jawDrop*0.35, w: headW*0.022 },
+      { x: cx + headW*0.22, tip: jawDrop*0.35, w: headW*0.022 },
+    ];
+    fangData.forEach(f => {
+      const fy = cy + headH * 0.38;
+      const fg = hx.createLinearGradient(f.x, fy, f.x, fy + f.tip);
+      fg.addColorStop(0,   'rgb(245,240,220)');
+      fg.addColorStop(0.7, 'rgb(220,210,180)');
+      fg.addColorStop(1,   'rgb(180,160,120)');
+      hx.fillStyle = fg;
+      hx.shadowColor = 'rgba(0,0,0,0.5)'; hx.shadowBlur = 6;
+      hx.beginPath();
+      hx.moveTo(f.x - f.w, fy);
+      hx.lineTo(f.x + f.w, fy);
+      hx.bezierCurveTo(f.x + f.w*0.5, fy + f.tip*0.6, f.x + f.w*0.2, fy + f.tip*0.85, f.x, fy + f.tip);
+      hx.bezierCurveTo(f.x - f.w*0.2, fy + f.tip*0.85, f.x - f.w*0.5, fy + f.tip*0.6, f.x - f.w, fy);
+      hx.closePath(); hx.fill();
+      // Blood drip on tips
+      hx.fillStyle = 'rgba(180,20,20,0.85)';
+      hx.shadowColor = 'rgba(180,20,20,0.5)'; hx.shadowBlur = 8;
+      hx.beginPath(); hx.ellipse(f.x, fy + f.tip + hh*0.008, f.w*0.45, hh*0.012, 0, 0, Math.PI*2); hx.fill();
+      hx.beginPath(); hx.moveTo(f.x - f.w*0.15, fy + f.tip); hx.lineTo(f.x + f.w*0.15, fy + f.tip); hx.lineTo(f.x, fy + f.tip + hh*0.02); hx.closePath(); hx.fill();
+    });
+
+    // Eyes — reptilian slit pupils
+    const eyeData = [
+      { x: cx - headW*0.42, y: cy - headH*0.06 },
+      { x: cx + headW*0.42, y: cy - headH*0.06 },
+    ];
+    eyeData.forEach(e => {
+      const er = headW * 0.11;
+      // Eye glow
+      hx.shadowColor = 'rgba(200,160,0,0.8)'; hx.shadowBlur = 20;
+      hx.fillStyle = 'rgb(180,140,0)';
+      hx.beginPath(); hx.ellipse(e.x, e.y, er, er*0.85, 0, 0, Math.PI*2); hx.fill();
+      // Iris detail
+      const ig = hx.createRadialGradient(e.x, e.y, 0, e.x, e.y, er);
+      ig.addColorStop(0,   'rgb(220,180,10)');
+      ig.addColorStop(0.4, 'rgb(160,120,0)');
+      ig.addColorStop(0.8, 'rgb(80,55,0)');
+      ig.addColorStop(1,   'rgb(20,15,0)');
+      hx.fillStyle = ig; hx.shadowBlur = 0;
+      hx.beginPath(); hx.ellipse(e.x, e.y, er, er*0.85, 0, 0, Math.PI*2); hx.fill();
+      // Slit pupil — vertical
+      hx.fillStyle = 'rgba(0,0,0,0.95)';
+      hx.beginPath(); hx.ellipse(e.x, e.y, er*0.16, er*0.78, 0, 0, Math.PI*2); hx.fill();
+      // Eye shine
+      hx.fillStyle = 'rgba(255,255,255,0.5)';
+      hx.beginPath(); hx.ellipse(e.x - er*0.22, e.y - er*0.28, er*0.18, er*0.12, -0.4, 0, Math.PI*2); hx.fill();
+    });
+    hx.restore();
+
+    // Scales on top of head — geometric pattern
+    hx.save();
+    headPath(); hx.clip();
+    hx.strokeStyle = 'rgba(90,120,30,0.22)'; hx.lineWidth = 0.7;
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 10; col++) {
+        const sx = cx - headW*0.8 + col * headW*0.18 + (row%2)*headW*0.09;
+        const sy = cy - headH*0.4 + row * headH*0.12;
+        hx.beginPath(); hx.ellipse(sx, sy, headW*0.08, headH*0.055, 0.1, 0, Math.PI*2); hx.stroke();
+      }
+    }
+    hx.restore();
+  }
+
+  // ── Atmospheric particles ──────────────────────────────
+  const spores = Array.from({length: 22}, () => ({
+    x: Math.random(), y: Math.random(),
+    vx: (Math.random()-0.5)*0.00015, vy: -0.00008 - Math.random()*0.00015,
+    r: 0.8 + Math.random()*2, a: 0.1+Math.random()*0.3,
+  }));
+  function drawSpores(t) {
+    spores.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
+      if (p.x < 0) p.x = 1; if (p.x > 1) p.x = 0;
+      hx.save();
+      hx.globalAlpha = p.a * (0.5 + Math.sin(t*0.003 + p.x*20)*0.5);
+      hx.fillStyle = 'rgba(180,220,140,0.9)';
+      hx.shadowColor = 'rgba(140,200,80,0.5)'; hx.shadowBlur = 8;
+      hx.beginPath(); hx.arc(p.x*hw, p.y*hh, p.r, 0, Math.PI*2); hx.fill();
+      hx.restore();
+    });
+  }
+
+  // ── Main render loop ──────────────────────────────────
+  let riseProgress = 0;
+  function frame() {
+    hf++;
+    if (riseProgress < 1) riseProgress = Math.min(1, riseProgress + 0.004);
+    const rise = ease(riseProgress);
+
+    drawBg();
+    drawVines();
+    drawCoil(1 - rise);
+    drawWater(hf);
+    drawSplash(hf);
+    drawHead(rise);
+    drawFog(hf);
+    drawSpores(hf);
+
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
