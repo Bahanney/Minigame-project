@@ -395,24 +395,28 @@ function render() {
 function lighten(h,a){const n=parseInt(h.replace('#',''),16);return `rgb(${Math.min(255,(n>>16)+a)},${Math.min(255,((n>>8)&0xff)+a)},${Math.min(255,(n&0xff)+a)})`;}
 function darken(h,a){const n=parseInt(h.replace('#',''),16);return `rgb(${Math.max(0,(n>>16)-a)},${Math.max(0,((n>>8)&0xff)-a)},${Math.max(0,(n&0xff)-a)})`;}
 
-// drawSeg — zero shadowBlur. 3D effect via highlight/shadow rects instead
+// drawSeg — clean segments with diagonal gradient illusion, no shadowBlur
 function drawSeg(seg,col,scaleCol,darkCol,CELL,offX,offY) {
-  const x=offX+seg.x*CELL, y=offY+seg.y*CELL;
-  // Base
+  const x=offX+seg.x*CELL, y=offY+seg.y*CELL, p=2;
+  // Base tile
   ctx.fillStyle=col;
-  ctx.beginPath(); ctx.roundRect(x+2,y+2,CELL-4,CELL-4,5); ctx.fill();
-  // Top-left highlight
-  ctx.fillStyle=lighten(col,38);
-  ctx.beginPath(); ctx.roundRect(x+2,y+2,Math.floor(CELL*0.56),Math.floor(CELL*0.46),4); ctx.fill();
-  // Bottom-right shadow
+  ctx.beginPath(); ctx.roundRect(x+p,y+p,CELL-p*2,CELL-p*2,4); ctx.fill();
+  // Single diagonal shine strip — top-left to center
+  ctx.fillStyle=lighten(col,30);
+  ctx.globalAlpha*=0.45;
+  ctx.beginPath(); ctx.roundRect(x+p,y+p,CELL-p*2,Math.floor(CELL*0.38),4); ctx.fill();
+  ctx.globalAlpha/=0.45;
+  // Bottom edge darkening
   ctx.fillStyle=darkCol;
-  ctx.beginPath(); ctx.roundRect(x+Math.floor(CELL*0.44),y+Math.floor(CELL*0.5),Math.floor(CELL*0.52),Math.floor(CELL*0.46),3); ctx.fill();
-  // Scale dots
-  const prevAlpha=ctx.globalAlpha; ctx.globalAlpha*=0.25; ctx.fillStyle=scaleCol;
-  for(let sx=0;sx<2;sx++)for(let sy=0;sy<2;sy++){
-    ctx.beginPath(); ctx.ellipse(x+4+sx*(CELL-8)/2+3,y+4+sy*(CELL-8)/2+3,3,2,0,0,Math.PI*2); ctx.fill();
-  }
-  ctx.globalAlpha=prevAlpha;
+  ctx.globalAlpha*=0.5;
+  ctx.beginPath(); ctx.roundRect(x+p,y+Math.floor(CELL*0.62),CELL-p*2,Math.floor(CELL*0.36),3); ctx.fill();
+  ctx.globalAlpha/=0.5;
+  // Two scale dots only — subtle, no visual noise
+  ctx.fillStyle=scaleCol; ctx.globalAlpha*=0.22;
+  const sd=Math.max(2,CELL*0.14);
+  ctx.beginPath(); ctx.arc(x+CELL*0.3,y+CELL*0.38,sd,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+CELL*0.7,y+CELL*0.62,sd,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha/=0.22;
 }
 
 // drawHead — one shadowBlur only, on heads
