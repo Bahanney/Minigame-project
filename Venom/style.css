@@ -270,24 +270,35 @@ footer { flex-shrink: 0; font-size: 7px; letter-spacing: 2px; color: rgba(138,12
 }
 .btn-ghost-light:hover { border-color: var(--cream-dim); color: var(--cream); }
 
-/* SHORT SCREENS — hide non-essentials, tighten everything */
-@media (max-height: 680px) {
-  .wrapper { gap: 2px; padding: 2px 8px 2px; }
-  .game-title { font-size: 13px; letter-spacing: 4px; }
+/* MOBILE — hide all non-essential chrome, canvas gets everything */
+@media (max-width: 600px) {
+  .legend { display: none; }
+  footer  { display: none; }
   .game-subtitle { display: none; }
-  .stat-value { font-size: 11px; }
+  .wrapper { gap: 2px; padding: 2px 6px 2px; }
+  .game-title { font-size: 14px; letter-spacing: 4px; }
+  .title-bracket { font-size: 10px; }
+  .stat-value { font-size: 12px; }
   .stat-label { font-size: 5px; }
+  .stats-bar { padding: 2px 8px; }
   .ai-bar { padding: 2px 8px; }
   .ai-label { font-size: 8px; }
   .ai-threat-text { font-size: 7px; min-width: 70px; }
+}
+/* SHORT SCREENS */
+@media (max-height: 680px) {
+  .wrapper { gap: 2px; padding: 2px 6px 2px; }
+  .game-subtitle { display: none; }
   .legend { display: none; }
   footer { display: none; }
+  .game-title { font-size: 13px; letter-spacing: 4px; }
+  .stat-value { font-size: 11px; }
   /* Splash screen on short phones */
   .splash-title { font-size: clamp(38px, 10vw, 64px); letter-spacing: 8px; }
   .splash-sub { display: none; }
   .splash-hint { display: none; }
 }
 @media (max-width: 360px) {
-  .stat-value { font-size: 11px; }
-  .stats-bar { padding: 3px 8px; }
+  .stat-value { font-size: 10px; }
+  .stats-bar { padding: 2px 6px; }
 }
