@@ -456,17 +456,12 @@ function endGame(reason) {
 function showScreen(id){['pause-screen','gameover-screen'].forEach(s=>{document.getElementById(s).style.display=s===id?'flex':'none';});}
 function hideAll(){['pause-screen','gameover-screen'].forEach(s=>{document.getElementById(s).style.display='none';});}
 
-let _heroActive = true, _lastHeroFrame = 0;
+let _heroActive = true;
 function go(id) {
   ['welcome-screen','game-screen','goodbye-screen'].forEach(s=>{
     document.getElementById(s).style.display=s===id?'flex':'none';
   });
   _heroActive = (id==='welcome-screen');
-  if (id==='welcome-screen') {
-    const best=localStorage.getItem('venom_best')||'0';
-    const el=document.getElementById('welcome-best');
-    if (el) el.textContent = parseInt(best)>0 ? `Best · ${best}` : '';
-  }
 }
 
 // Input

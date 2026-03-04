@@ -11,25 +11,28 @@
 
   <!-- WELCOME SCREEN -->
   <div id="welcome-screen" class="screen welcome-screen">
-    <!-- Full-screen cinematic canvas -->
     <canvas id="hero-canvas" class="hero-canvas"></canvas>
-
-    <!-- Title pinned to top — like the reference image -->
-    <div class="splash-top">
-      <div class="splash-best" id="welcome-best"></div>
-      <h1 class="splash-title">VENOM</h1>
-      <p class="splash-sub">SURVIVE · OUTTHINK · OUTLAST</p>
-    </div>
-
-    <!-- Buttons pinned to bottom — like the reference image -->
-    <div class="splash-bottom">
-      <input id="player-name-input" class="name-input" type="text" maxlength="6" placeholder="Enter callsign"/>
-      <div class="splash-buttons">
-        <button class="btn-yes" id="yes-btn">▶ &nbsp;PLAY</button>
-        <button class="btn-no"  id="no-btn">EXIT</button>
+    <div class="blood-drip"></div>
+    <div class="welcome-content">
+      <div class="skull">🐍</div>
+      <h1 class="welcome-title">VENOM</h1>
+      <p class="welcome-tagline">Something is waiting in the dark.</p>
+      <div class="welcome-divider">— ✦ —</div>
+      <div class="challenge-box">
+        <p class="challenge-text">
+          Welcome to VENOM.<br/><br/>
+          Can you <span class="highlight-gold">defeat the Hunter</span>?<br/>
+          Can you <span class="highlight-rose">avoid the Poison</span>?<br/><br/>
+          <em>It learns your every move.<br/>It does not stop. It does not forgive.</em>
+        </p>
       </div>
-      <p class="splash-hint">Arrow keys or swipe · P to pause</p>
+      <input id="player-name-input" class="name-input" type="text" maxlength="6" placeholder="Enter your name"/>
+      <div class="welcome-buttons">
+        <button class="btn-yes" id="yes-btn">⚔ Yes, I'm Ready</button>
+        <button class="btn-no"  id="no-btn">🕯 No, Take Me Back</button>
+      </div>
     </div>
+    <div class="welcome-footer">Enter if you dare</div>
   </div>
 
   <!-- GAME SCREEN -->
@@ -89,7 +92,7 @@
         <div class="legend-item"><span class="legend-icon">❄</span> Freeze</div>
         <div class="legend-item"><span class="legend-icon">⚡</span> Speed</div>
       </div>
-      <footer>VENOM · Built by Ibinabo Collins · 2025</footer>
+      <footer>VENOM &nbsp;·&nbsp; Built by Ibinabo Collins &nbsp;·&nbsp; 2025</footer>
     </div>
   </div>
 
