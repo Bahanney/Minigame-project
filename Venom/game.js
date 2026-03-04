@@ -288,19 +288,32 @@ function animateScore() {
   el.classList.remove('score-pop'); void el.offsetWidth; el.classList.add('score-pop');
 }
 
-// Render
+
+// Grid offscreen cache — drawn once, blitted each frame
+let _gridCanvas = null, _gridCELL = 0;
+function buildGrid(CELL) {
+  if (CELL === _gridCELL && _gridCanvas) return;
+  _gridCELL = CELL;
+  _gridCanvas = document.createElement('canvas');
+  _gridCanvas.width = COLS * CELL; _gridCanvas.height = ROWS * CELL;
+  const gc = _gridCanvas.getContext('2d');
+  gc.strokeStyle = C.grid; gc.lineWidth = 0.5; gc.beginPath();
+  for (let x = 0; x <= COLS; x++) { gc.moveTo(x*CELL,0); gc.lineTo(x*CELL,ROWS*CELL); }
+  for (let y = 0; y <= ROWS; y++) { gc.moveTo(0,y*CELL); gc.lineTo(COLS*CELL,y*CELL); }
+  gc.stroke();
+}
+
+// Render — shadowBlur only on heads + powerup/food (never on body segments)
 function render() {
   const CELL = cellSize();
-  const offX = Math.floor((canvas.width  - COLS * CELL) / 2);
-  const offY = Math.floor((canvas.height - ROWS * CELL) / 2);
-  ctx.fillStyle=C.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
-  // Draw game area background
-  ctx.fillStyle='#090710'; ctx.fillRect(offX,offY,COLS*CELL,ROWS*CELL);
-  ctx.strokeStyle=C.grid; ctx.lineWidth=0.5;
-  for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(offX+x*CELL,offY);ctx.lineTo(offX+x*CELL,offY+ROWS*CELL);ctx.stroke();}
-  for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(offX,offY+y*CELL);ctx.lineTo(offX+COLS*CELL,offY+y*CELL);ctx.stroke();}
+  const offX = Math.floor((canvas.width  - COLS*CELL) / 2);
+  const offY = Math.floor((canvas.height - ROWS*CELL) / 2);
 
-  // Countdown overlay
+  ctx.fillStyle = C.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#090710'; ctx.fillRect(offX,offY,COLS*CELL,ROWS*CELL);
+  buildGrid(CELL);
+  ctx.drawImage(_gridCanvas, offX, offY);
+
   if (state.counting) {
     ctx.fillStyle='rgba(9,7,16,0.85)'; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle=state.countdown>0?'#d4a853':'#5bbf9a';
@@ -309,101 +322,118 @@ function render() {
     return;
   }
 
-  // Poisons
-  state.poisons.forEach(p=>{
-    const a=p.life<=10?p.life/10:1;
-    ctx.save(); ctx.globalAlpha=a; ctx.shadowColor=C.poisonGlow; ctx.shadowBlur=10;
-    ctx.fillStyle=C.poison; ctx.beginPath();
-    ctx.roundRect(offX+p.x*CELL+3,offY+p.y*CELL+3,CELL-6,CELL-6,4); ctx.fill();
-    ctx.fillStyle=`rgba(255,255,255,${a*0.8})`; ctx.font=`${CELL-8}px monospace`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('✕',offX+p.x*CELL+CELL/2,offY+p.y*CELL+CELL/2); ctx.restore();
+  // Poisons — flat colour, no blur
+  ctx.font=`${CELL-8}px monospace`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  state.poisons.forEach(p => {
+    const a = p.life<=10?p.life/10:1;
+    ctx.globalAlpha = a; ctx.fillStyle = C.poison;
+    ctx.beginPath(); ctx.roundRect(offX+p.x*CELL+3,offY+p.y*CELL+3,CELL-6,CELL-6,4); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    ctx.fillText('✕',offX+p.x*CELL+CELL/2,offY+p.y*CELL+CELL/2);
   });
+  ctx.globalAlpha = 1;
 
-  // Powerup — bright glowing tile with pulsing ring
+  // Powerup — blur only on this one item
   if (state.powerup) {
     const icons={shield:'🛡',freeze:'❄',speed:'⚡'};
     const cols={shield:C.shield,freeze:C.freeze,speed:C.speed};
     const a=state.powerup.life<=10?state.powerup.life/10:1;
     const col=cols[state.powerup.type];
     const px=offX+state.powerup.x*CELL, py=offY+state.powerup.y*CELL;
-    const cx=px+CELL/2, cy=py+CELL/2;
+    const pcx=px+CELL/2, pcy=py+CELL/2;
     ctx.save();
-    // Glowing background tile
-    ctx.globalAlpha=a*0.9; ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=30;
+    ctx.globalAlpha=a*0.9; ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=22;
     ctx.beginPath(); ctx.roundRect(px+1,py+1,CELL-2,CELL-2,6); ctx.fill();
-    // Pulsing outer ring
     const ring=(state.ticks%20)/20;
-    ctx.globalAlpha=a*(0.6-ring*0.55); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.shadowBlur=20;
-    ctx.beginPath(); ctx.arc(cx,cy,CELL/2+ring*CELL*0.55,0,Math.PI*2); ctx.stroke();
-    // Dark icon on bright background
+    ctx.globalAlpha=a*(0.55-ring*0.5); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.arc(pcx,pcy,CELL/2+ring*CELL*0.5,0,Math.PI*2); ctx.stroke();
     ctx.globalAlpha=a; ctx.shadowBlur=0;
     ctx.font=`bold ${CELL-5}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='#050310';
-    ctx.fillText(icons[state.powerup.type],cx,cy+1);
+    ctx.fillStyle='#050310'; ctx.fillText(icons[state.powerup.type],pcx,pcy+1);
     ctx.restore();
   }
 
-  // Food
+  // Food — small blur on single item only
   if (state.food) {
-    ctx.save(); ctx.shadowColor=C.foodGlow; ctx.shadowBlur=14; ctx.fillStyle=C.food;
+    ctx.save(); ctx.shadowColor=C.foodGlow; ctx.shadowBlur=8; ctx.fillStyle=C.food;
     ctx.font=`${CELL-4}px monospace`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('★',offX+state.food.x*CELL+CELL/2,offY+state.food.y*CELL+CELL/2); ctx.restore();
+    ctx.fillText('★',offX+state.food.x*CELL+CELL/2,offY+state.food.y*CELL+CELL/2);
+    ctx.restore();
   }
 
-  // Hunter
-  state.hunter.forEach((s,i)=>{ if(!i)return; ctx.globalAlpha=Math.max(0.3,1-i*0.05); drawSeg(s,C.hunter,C.hunterScale,C.hunterDark,C.hunterGlow,CELL,offX,offY); ctx.globalAlpha=1; });
+  // Hunter body — NO shadowBlur
+  state.hunter.forEach((s,i) => {
+    if (!i) return;
+    ctx.globalAlpha = Math.max(0.3,1-i*0.05);
+    drawSeg(s,C.hunter,C.hunterScale,C.hunterDark,CELL,offX,offY);
+  });
+  ctx.globalAlpha=1;
   if (state.hunter.length) drawHead(state.hunter[0],state.hunterDir,C.hunter,C.hunterHead,C.hunterGlow,CELL,offX,offY);
 
-  // Player — shield flashes gold outline
-  if (state.shield) { ctx.save(); ctx.strokeStyle=C.shield; ctx.lineWidth=2; ctx.shadowColor=C.shield; ctx.shadowBlur=12; ctx.strokeRect(offX+state.snake[0].x*CELL+1,offY+state.snake[0].y*CELL+1,CELL-2,CELL-2); ctx.restore(); }
-  state.snake.forEach((s,i)=>{ if(!i)return; ctx.globalAlpha=Math.max(0.35,1-i*0.03); drawSeg(s,C.snake,C.snakeScale,C.snakeDark,C.snakeGlow,CELL,offX,offY); ctx.globalAlpha=1; });
+  // Shield
+  if (state.shield) {
+    ctx.save(); ctx.strokeStyle=C.shield; ctx.lineWidth=2; ctx.shadowColor=C.shield; ctx.shadowBlur=8;
+    ctx.strokeRect(offX+state.snake[0].x*CELL+1,offY+state.snake[0].y*CELL+1,CELL-2,CELL-2);
+    ctx.restore();
+  }
+
+  // Player body — NO shadowBlur
+  state.snake.forEach((s,i) => {
+    if (!i) return;
+    ctx.globalAlpha = Math.max(0.35,1-i*0.03);
+    drawSeg(s,C.snake,C.snakeScale,C.snakeDark,CELL,offX,offY);
+  });
+  ctx.globalAlpha=1;
   drawHead(state.snake[0],state.dir,C.snake,'#fff',C.snakeGlow,CELL,offX,offY);
 
-  // Player name tag above head
-  ctx.save(); ctx.fillStyle='rgba(212,168,83,0.85)'; ctx.font=`bold 9px Cinzel,serif`;
+  // Name tag
+  ctx.fillStyle='rgba(212,168,83,0.85)'; ctx.font='bold 9px Cinzel,serif';
   ctx.textAlign='center'; ctx.textBaseline='bottom';
-  ctx.fillText(playerName, offX+state.snake[0].x*CELL+CELL/2, offY+state.snake[0].y*CELL-1); ctx.restore();
+  ctx.fillText(playerName,offX+state.snake[0].x*CELL+CELL/2,offY+state.snake[0].y*CELL-1);
 }
 
-// Tint helpers
 function lighten(h,a){const n=parseInt(h.replace('#',''),16);return `rgb(${Math.min(255,(n>>16)+a)},${Math.min(255,((n>>8)&0xff)+a)},${Math.min(255,(n&0xff)+a)})`;}
 function darken(h,a){const n=parseInt(h.replace('#',''),16);return `rgb(${Math.max(0,(n>>16)-a)},${Math.max(0,((n>>8)&0xff)-a)},${Math.max(0,(n&0xff)-a)})`;}
 
-function drawSeg(seg,col,scaleCol,darkCol,glow,CELL,offX,offY) {
-  const x=offX+seg.x*CELL, y=offY+seg.y*CELL, cx=x+CELL/2, cy=y+CELL/2, r=CELL/2-1;
-  ctx.save(); ctx.shadowColor=glow; ctx.shadowBlur=8;
-  const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,1,cx,cy,r);
-  g.addColorStop(0,lighten(col,40)); g.addColorStop(0.4,col); g.addColorStop(1,darkCol);
-  ctx.fillStyle=g; ctx.beginPath(); ctx.roundRect(x+2,y+2,CELL-4,CELL-4,5); ctx.fill();
-  ctx.fillStyle=scaleCol; ctx.globalAlpha=0.3;
-  for(let sx=0;sx<2;sx++)for(let sy=0;sy<2;sy++){ctx.beginPath();ctx.ellipse(x+4+sx*(CELL-8)/2+3,y+4+sy*(CELL-8)/2+3,3.5,2.5,0,0,Math.PI*2);ctx.fill();}
-  ctx.globalAlpha=1; ctx.restore();
+// drawSeg — zero shadowBlur. 3D effect via highlight/shadow rects instead
+function drawSeg(seg,col,scaleCol,darkCol,CELL,offX,offY) {
+  const x=offX+seg.x*CELL, y=offY+seg.y*CELL;
+  // Base
+  ctx.fillStyle=col;
+  ctx.beginPath(); ctx.roundRect(x+2,y+2,CELL-4,CELL-4,5); ctx.fill();
+  // Top-left highlight
+  ctx.fillStyle=lighten(col,38);
+  ctx.beginPath(); ctx.roundRect(x+2,y+2,Math.floor(CELL*0.56),Math.floor(CELL*0.46),4); ctx.fill();
+  // Bottom-right shadow
+  ctx.fillStyle=darkCol;
+  ctx.beginPath(); ctx.roundRect(x+Math.floor(CELL*0.44),y+Math.floor(CELL*0.5),Math.floor(CELL*0.52),Math.floor(CELL*0.46),3); ctx.fill();
+  // Scale dots
+  const prevAlpha=ctx.globalAlpha; ctx.globalAlpha*=0.25; ctx.fillStyle=scaleCol;
+  for(let sx=0;sx<2;sx++)for(let sy=0;sy<2;sy++){
+    ctx.beginPath(); ctx.ellipse(x+4+sx*(CELL-8)/2+3,y+4+sy*(CELL-8)/2+3,3,2,0,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=prevAlpha;
 }
 
+// drawHead — one shadowBlur only, on heads
 function drawHead(seg,dir,col,eyeCol,glow,CELL,offX,offY) {
   const x=offX+seg.x*CELL,y=offY+seg.y*CELL,cx=x+CELL/2,cy=y+CELL/2,r=CELL/2-1;
-  ctx.save(); ctx.shadowColor=glow; ctx.shadowBlur=18;
+  ctx.save();
+  ctx.shadowColor=glow; ctx.shadowBlur=14;
   const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,1,cx,cy,r);
   g.addColorStop(0,lighten(col,60)); g.addColorStop(0.5,col); g.addColorStop(1,darken(col,30));
-  ctx.fillStyle=g; ctx.beginPath(); ctx.roundRect(x+1,y+1,CELL-2,CELL-2,CELL/2); ctx.fill(); ctx.restore();
-  ctx.save();
+  ctx.fillStyle=g; ctx.beginPath(); ctx.roundRect(x+1,y+1,CELL-2,CELL-2,CELL/2); ctx.fill();
+  ctx.shadowBlur=0;
   const eo=3.5;
   const eyes={1:{a:{x:cx+3,y:cy-eo},b:{x:cx+3,y:cy+eo}},'-1':{a:{x:cx-3,y:cy-eo},b:{x:cx-3,y:cy+eo}}};
   const eyeY={1:{a:{x:cx-eo,y:cy+3},b:{x:cx+eo,y:cy+3}},'-1':{a:{x:cx-eo,y:cy-3},b:{x:cx+eo,y:cy-3}}};
   const ep=dir.x?eyes[dir.x]:eyeY[dir.y];
-  if (ep) {
-    [ep.a,ep.b].forEach(e=>{
-      ctx.fillStyle='#fff'; ctx.shadowColor=eyeCol; ctx.shadowBlur=6;
-      ctx.beginPath(); ctx.arc(e.x,e.y,2.8,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#111'; ctx.shadowBlur=0;
-      ctx.beginPath(); ctx.arc(e.x+dir.x*0.5,e.y+dir.y*0.5,1.4,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.8)';
-      ctx.beginPath(); ctx.arc(e.x-0.6,e.y-0.6,0.7,0,Math.PI*2); ctx.fill();
-    });
-  }
+  if(ep){[ep.a,ep.b].forEach(e=>{
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(e.x,e.y,2.8,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(e.x+dir.x*0.5,e.y+dir.y*0.5,1.4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(e.x-0.6,e.y-0.6,0.7,0,Math.PI*2); ctx.fill();
+  });}
   ctx.restore();
-
 }
 
 function endGame(reason) {
@@ -422,10 +452,12 @@ function endGame(reason) {
 function showScreen(id){['pause-screen','gameover-screen'].forEach(s=>{document.getElementById(s).style.display=s===id?'flex':'none';});}
 function hideAll(){['pause-screen','gameover-screen'].forEach(s=>{document.getElementById(s).style.display='none';});}
 
+let _heroActive = true, _lastHeroFrame = 0;
 function go(id) {
   ['welcome-screen','game-screen','goodbye-screen'].forEach(s=>{
     document.getElementById(s).style.display=s===id?'flex':'none';
   });
+  _heroActive = (id==='welcome-screen');
   if (id==='welcome-screen') {
     const best=localStorage.getItem('venom_best')||'0';
     const el=document.getElementById('welcome-best');
@@ -888,7 +920,7 @@ canvas.addEventListener('touchend',e=>{
     drawFog(hf);
     drawSpores(hf);
 
-    requestAnimationFrame(frame);
+    if (_heroActive) requestAnimationFrame(frame);
   }
   frame();
 })();
