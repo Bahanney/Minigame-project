@@ -49,7 +49,7 @@ function fresh() {
   return {
     running:false, paused:false, over:false,
     score:0, best:parseInt(localStorage.getItem('venom_best')||'0'), level:1,
-    tickRate:180, timer:null, ticks:0,
+    tickRate:220, timer:null, ticks:0,
     snake:[{x:12,y:12},{x:11,y:12},{x:10,y:12}],
     dir:{...DIR.RIGHT}, next:{...DIR.RIGHT},
     food:null, poisons:[], poisonTimer:0,
@@ -154,7 +154,7 @@ function tick() {
 
   // Powerup tick
   if (state.powerup) { state.powerup.life--; if (state.powerup.life<=0) state.powerup=null; }
-  if (state.speedy > 0) { state.speedy--; if (state.speedy===0) { state.tickRate=Math.max(100,180-(state.level-1)*8); startLoop(); } }
+  if (state.speedy > 0) { state.speedy--; if (state.speedy===0) { state.tickRate=Math.max(120,220-(state.level-1)*8); startLoop(); } }
 
   // Poison spawn
   state.poisonTimer++;
@@ -166,7 +166,7 @@ function tick() {
   const lv = Math.floor(state.score/5)+1;
   if (lv !== state.level) {
     state.level = lv;
-    if (state.speedy===0) { state.tickRate=Math.max(100,180-(lv-1)*8); startLoop(); }
+    if (state.speedy===0) { state.tickRate=Math.max(120,220-(state.level-1)*8); startLoop(); }
     if (lv%3===0) state.hunterMod = Math.max(1, state.hunterMod-0.5);
   }
 
