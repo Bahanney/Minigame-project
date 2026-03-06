@@ -500,9 +500,19 @@ document.addEventListener('touchmove',e=>{if(state.running&&!state.paused)e.prev
 canvas.addEventListener('touchstart',e=>{e.preventDefault();touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:false});
 canvas.addEventListener('touchend',e=>{
   e.preventDefault(); if(!touch||!state.running||state.paused)return;
-  const dx=e.changedTouches[0].clientX-touch.x, dy=e.changedTouches[0].clientY-touch.y, d=state.dir;
-  if(Math.abs(dx)>Math.abs(dy)){if(dx>20&&d.x!==-1)state.next={...DIR.RIGHT};if(dx<-20&&d.x!==1)state.next={...DIR.LEFT};}
-  else{if(dy>20&&d.y!==-1)state.next={...DIR.DOWN};if(dy<-20&&d.y!==1)state.next={...DIR.UP};}
+  const dx=e.changedTouches[0].clientX-touch.x, dy=e.changedTouches[0].clientY-touch.y;
+  const adx=Math.abs(dx), ady=Math.abs(dy);
+  // Ignore tiny accidental touches — require at least 35px
+  if(adx<35&&ady<35){touch=null;return;}
+  // Use state.next (queued direction) not state.dir to prevent 180 reversal
+  const d=state.next||state.dir;
+  if(adx>ady){
+    if(dx>0&&d.x!==-1) state.next={...DIR.RIGHT};
+    if(dx<0&&d.x!==1)  state.next={...DIR.LEFT};
+  } else {
+    if(dy>0&&d.y!==-1) state.next={...DIR.DOWN};
+    if(dy<0&&d.y!==1)  state.next={...DIR.UP};
+  }
   touch=null;
 },{passive:false});
 
