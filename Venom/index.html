@@ -61,6 +61,19 @@
         <span class="ai-threat-text" id="ai-threat-text">Dormant...</span>
       </div>
       <div class="canvas-wrapper">
+        <svg class="venom-border" id="venom-border-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <path id="border-path" d=""/>
+          </defs>
+          <!-- Static glowing outline -->
+          <rect id="border-rect" rx="1" ry="1"/>
+          <!-- Marching VENOM text -->
+          <text>
+            <textPath href="#border-path" startOffset="0%">
+              VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM · VENOM ·
+            </textPath>
+          </text>
+        </svg>
         <canvas id="game-canvas"></canvas>
         <div class="powerup-msg" id="powerup-msg"></div>
         <div class="overlay" id="pause-screen" style="display:none">

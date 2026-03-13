@@ -9,7 +9,41 @@ function resizeCanvas() {
   const wrapper = canvas.parentElement;
   canvas.width  = wrapper.clientWidth;
   canvas.height = wrapper.clientHeight;
+  updateVenomBorder();
 }
+
+function updateVenomBorder() {
+  const wrapper = canvas.parentElement;
+  const w = wrapper.clientWidth + 6;
+  const h = wrapper.clientHeight + 6;
+  const svg = document.getElementById('venom-border-svg');
+  const rect = document.getElementById('border-rect');
+  const path = document.getElementById('border-path');
+  if (!svg || !rect || !path) return;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  rect.setAttribute('x', '1.5'); rect.setAttribute('y', '1.5');
+  rect.setAttribute('width', w - 3); rect.setAttribute('height', h - 3);
+  const r = 1;
+  const pw = w - 3, ph = h - 3;
+  path.setAttribute('d',
+    `M${1.5+r},1.5 H${1.5+pw-r} Q${1.5+pw},1.5 ${1.5+pw},${1.5+r} ` +
+    `V${1.5+ph-r} Q${1.5+pw},${1.5+ph} ${1.5+pw-r},${1.5+ph} ` +
+    `H${1.5+r} Q1.5,${1.5+ph} 1.5,${1.5+ph-r} ` +
+    `V${1.5+r} Q1.5,1.5 ${1.5+r},1.5 Z`
+  );
+}
+
+// March VENOM text around the border
+let _borderOffset = 0;
+(function marchBorder() {
+  const tp = document.querySelector('.venom-border textPath');
+  if (tp) {
+    _borderOffset = (_borderOffset + 0.04) % 100;
+    tp.setAttribute('startOffset', _borderOffset + '%');
+  }
+  requestAnimationFrame(marchBorder);
+})();
+
 window.addEventListener('resize', () => { resizeCanvas(); if (!state.running) render(); });
 
 function cellSize() { return Math.floor(Math.min(canvas.width / COLS, canvas.height / ROWS)); }
