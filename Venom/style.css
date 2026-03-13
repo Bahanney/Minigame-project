@@ -259,12 +259,11 @@ header {
 
 /* CANVAS — flex:1 fills all remaining height between header and footer */
 .canvas-wrapper {
-  position: relative; flex: 1; min-height: 0;
-  /* Square on desktop — fill width on mobile */
+  position: relative;
+  /* Fill all leftover flex space between header and footer */
+  flex: 1; min-height: 0; min-width: 0;
   width: 100%;
-  max-width: min(100%, calc(100vh - 140px));
-  aspect-ratio: 1;
-  align-self: center;
+  align-self: stretch;
   border: 2px solid #39ff14;
   box-shadow: 0 0 12px rgba(57,255,20,0.6), inset 0 0 8px rgba(57,255,20,0.08);
   background: #090710; overflow: hidden;

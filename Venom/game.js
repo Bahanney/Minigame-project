@@ -303,13 +303,20 @@ function buildGrid(CELL) {
   gc.stroke();
 }
 
+function cellSize() {
+  const byWidth  = Math.floor(canvas.width  / COLS);
+  const byHeight = Math.floor(canvas.height / ROWS);
+  return Math.min(byWidth, byHeight);
+}
+
 // Render — shadowBlur only on heads + powerup/food (never on body segments)
 function render() {
   const CELL = cellSize();
+  // Centre grid horizontally if canvas wider than grid, pin flush top-to-bottom
   const offX = Math.floor((canvas.width  - COLS*CELL) / 2);
   const offY = Math.floor((canvas.height - ROWS*CELL) / 2);
 
-  ctx.fillStyle = C.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.fillStyle = '#090710'; ctx.fillRect(offX,offY,COLS*CELL,ROWS*CELL);
   buildGrid(CELL);
   ctx.drawImage(_gridCanvas, offX, offY);
