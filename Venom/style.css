@@ -152,10 +152,10 @@ body {
 }
 .name-input::placeholder { color: rgba(255,255,255,0.45); font-size: 16px; }
 .name-input:focus {
-  border-color: #39ff14;
-  box-shadow: 0 0 20px rgba(57,255,20,0.5);
-  background: rgba(57,255,20,0.06);
-  color: #39ff14;
+  border-color: #28cc0f;
+  box-shadow: 0 0 10px rgba(40,204,15,0.25);
+  background: rgba(40,204,15,0.04);
+  color: #28cc0f;
 }
 
 .welcome-buttons {
@@ -290,7 +290,7 @@ header {
 #game-canvas {
   display: block; width: 100%; height: 100%;
   position: relative; z-index: 1;
-  box-shadow: 0 0 30px rgba(57,255,20,0.15);
+  box-shadow: 0 0 18px rgba(40,204,15,0.07);
 }
 
 /* Animated VENOM border — SVG overlay */
@@ -302,14 +302,14 @@ header {
 }
 .venom-border rect {
   fill: none;
-  stroke: #39ff14;
-  stroke-width: 2.5;
-  filter: drop-shadow(0 0 6px #39ff14) drop-shadow(0 0 14px rgba(57,255,20,0.4));
+  stroke: #28cc0f;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 3px #28cc0f) drop-shadow(0 0 7px rgba(40,204,15,0.2));
 }
 /* Dashed text-like effect — repeating VENOM · letters march around the border */
 .venom-border .march {
   fill: none;
-  stroke: #39ff14;
+  stroke: #28cc0f;
   stroke-width: 0;
 }
 .venom-border textPath {
@@ -317,8 +317,8 @@ header {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 3px;
-  fill: #39ff14;
-  filter: drop-shadow(0 0 5px #39ff14);
+  fill: #28cc0f;
+  filter: drop-shadow(0 0 2px rgba(40,204,15,0.5));
 }
 .canvas-wrapper::before, .canvas-wrapper::after { display: none; }
 #game-canvas { display: block; width: 100%; height: 100%; }
@@ -326,8 +326,8 @@ header {
 /* POWERUP TOAST */
 .powerup-msg {
   position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-  font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px; color: var(--gold);
-  background: rgba(9,7,16,0.92); border: 1px solid var(--gold-dim); padding: 5px 14px;
+  font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: 3px; color: var(--gold);
+  background: rgba(9,7,16,0.95); border: 1px solid var(--gold); padding: 8px 18px;
   opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; z-index: 5;
 }
 .powerup-msg.show { opacity: 1; }
@@ -358,15 +358,18 @@ header {
 .overlay-box p { font-size: 11px; color: var(--cream-dim); line-height: 1.7; margin-bottom: 10px; font-style: italic; }
 #gameover-msg {
   font-family: 'Cinzel', serif;
-  font-size: 13px;
+  font-size: 15px;
   font-style: normal;
-  letter-spacing: 2px;
-  color: var(--rose);
-  background: rgba(196,104,122,0.1);
-  border: 1px solid rgba(196,104,122,0.3);
-  border-left: 3px solid var(--rose);
-  padding: 6px 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  line-height: 1.5;
+  color: #f0e8d8;
+  background: rgba(196,104,122,0.18);
+  border: 1px solid rgba(196,104,122,0.5);
+  border-left: 4px solid var(--rose);
+  padding: 10px 14px;
   margin-bottom: 10px;
+  text-align: left;
 }
 .final-score-row { display: flex; justify-content: center; gap: 22px; margin-bottom: 8px; }
 .final-stat { text-align: center; }
@@ -394,11 +397,11 @@ header {
 
 /* LEGEND — always visible, compact */
 .legend {
-  flex-shrink: 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-  font-size: 9px; letter-spacing: 1px; color: var(--cream-dim); font-style: italic;
+  flex-shrink: 0; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  font-size: 12px; letter-spacing: 1px; color: var(--cream); font-style: italic;
 }
-.legend-item { display: flex; align-items: center; gap: 3px; }
-.legend-icon { font-size: 10px; line-height: 1; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-icon { font-size: 13px; line-height: 1; }
 
 /* FOOTER — always visible */
 footer {

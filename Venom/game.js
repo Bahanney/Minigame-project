@@ -49,7 +49,7 @@ window.addEventListener('resize', () => { resizeCanvas(); if (!state.running) re
 function cellSize() { return Math.floor(Math.min(canvas.width / COLS, canvas.height / ROWS)); }
 
 const C = {
-  bg:'#090710', grid:'rgba(212,168,83,0.13)',
+  bg:'#090710', grid:'rgba(212,168,83,0.22)',
   snake:'#5bbf9a', snakeScale:'#4aaa87', snakeDark:'#2d7a5e', snakeGlow:'rgba(91,191,154,0.3)',
   food:'#d4a853', foodGlow:'rgba(212,168,83,0.6)',
   poison:'#c4687a', poisonGlow:'rgba(196,104,122,0.5)',
@@ -331,7 +331,7 @@ function buildGrid(CELL) {
   _gridCanvas = document.createElement('canvas');
   _gridCanvas.width = COLS * CELL; _gridCanvas.height = ROWS * CELL;
   const gc = _gridCanvas.getContext('2d');
-  gc.strokeStyle = C.grid; gc.lineWidth = 0.5; gc.beginPath();
+  gc.strokeStyle = C.grid; gc.lineWidth = 0.8; gc.beginPath();
   for (let x = 0; x <= COLS; x++) { gc.moveTo(x*CELL,0); gc.lineTo(x*CELL,ROWS*CELL); }
   for (let y = 0; y <= ROWS; y++) { gc.moveTo(0,y*CELL); gc.lineTo(COLS*CELL,y*CELL); }
   gc.stroke();
@@ -1002,7 +1002,7 @@ canvas.addEventListener('touchend',e=>{
   const TYPES = ['skull', 'snake', 'drop', 'eye'];
 
   const PALETTE = [
-    '#39ff14',  // neon green
+    '#28cc0f',  // toned green
     '#8b0000',  // deep blood red
     '#c4687a',  // rose
     '#a78bca',  // lavender
@@ -1243,7 +1243,7 @@ canvas.addEventListener('touchend',e=>{
     c.fillRect(0, 0, w, h);
 
     // Thin inner border — mirrors the game canvas glow
-    c.strokeStyle = 'rgba(57,255,20,0.08)';
+    c.strokeStyle = 'rgba(40,204,15,0.05)';
     c.lineWidth = 1;
     c.strokeRect(0, 0, w, h);
 
