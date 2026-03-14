@@ -974,3 +974,312 @@ canvas.addEventListener('touchend',e=>{
   }
   frame();
 })();
+
+// ── SIDE PANELS — Animated horror decoration ──────────────────────────────
+// Bouncing skulls, snakes, and blood drops fill the dead zones left/right of
+// the game canvas on wide screens. Runs in the same rAF loop as the border.
+
+(function () {
+  const LEFT  = document.getElementById('side-panel-left');
+  const RIGHT = document.getElementById('side-panel-right');
+  if (!LEFT || !RIGHT) return;
+
+  const lx = LEFT.getContext('2d');
+  const rx = RIGHT.getContext('2d');
+
+  // Resize panels to fill their CSS dimensions
+  function resizePanels() {
+    LEFT.width   = LEFT.offsetWidth;
+    LEFT.height  = LEFT.offsetHeight;
+    RIGHT.width  = RIGHT.offsetWidth;
+    RIGHT.height = RIGHT.offsetHeight;
+  }
+  window.addEventListener('resize', resizePanels);
+  resizePanels();
+
+  // ── Particle types ────────────────────────────────
+  // Each particle has: x, y, vx, vy, type, size, rot, rotSpeed, alpha, alphaDir, color
+  const TYPES = ['skull', 'snake', 'drop', 'eye'];
+
+  const PALETTE = [
+    '#39ff14',  // neon green
+    '#8b0000',  // deep blood red
+    '#c4687a',  // rose
+    '#a78bca',  // lavender
+    '#d4a853',  // gold
+    '#cc1a1a',  // blood bright
+  ];
+
+  function makeParticle(w, h) {
+    const type  = TYPES[Math.floor(Math.random() * TYPES.length)];
+    const color = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+    const size  = 14 + Math.random() * 22;
+    return {
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: (Math.random() - 0.5) * 1.2,
+      type,
+      size,
+      rot: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.04,
+      alpha: 0.3 + Math.random() * 0.55,
+      alphaDir: Math.random() > 0.5 ? 1 : -1,
+      color,
+    };
+  }
+
+  // Spawn particles relative to each panel's own dimensions
+  function makePool(count, w, h) {
+    return Array.from({ length: count }, () => makeParticle(w, h));
+  }
+
+  // We'll lazily create pools after first resize gives us real dimensions
+  let leftPool  = null;
+  let rightPool = null;
+  const PARTICLE_DENSITY = 12; // particles per panel
+
+  function ensurePools() {
+    if (!leftPool && LEFT.width > 2) {
+      leftPool  = makePool(PARTICLE_DENSITY, LEFT.width,  LEFT.height);
+    }
+    if (!rightPool && RIGHT.width > 2) {
+      rightPool = makePool(PARTICLE_DENSITY, RIGHT.width, RIGHT.height);
+    }
+  }
+
+  // ── Drawing helpers ───────────────────────────────
+  function drawSkull(c, x, y, size, rot, color, alpha) {
+    c.save();
+    c.globalAlpha = alpha;
+    c.translate(x, y);
+    c.rotate(rot);
+    c.font = `${size}px serif`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    // Glow in the panel's color
+    c.shadowColor = color;
+    c.shadowBlur  = 10;
+    c.fillStyle   = color;
+    // Draw a stylised skull using canvas primitives (no emoji — consistent cross-platform)
+    const s = size * 0.5;
+    // Cranium
+    c.beginPath();
+    c.ellipse(0, -s * 0.1, s * 0.7, s * 0.65, 0, 0, Math.PI * 2);
+    c.fill();
+    // Jaw
+    c.beginPath();
+    c.ellipse(0, s * 0.42, s * 0.5, s * 0.28, 0, 0, Math.PI);
+    c.fill();
+    // Dark eye sockets
+    c.globalAlpha = alpha * 0.85;
+    c.fillStyle = '#090710';
+    c.shadowBlur = 0;
+    c.beginPath();
+    c.ellipse(-s * 0.28, -s * 0.08, s * 0.22, s * 0.2, 0, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.ellipse(s * 0.28, -s * 0.08, s * 0.22, s * 0.2, 0, 0, Math.PI * 2);
+    c.fill();
+    // Nose
+    c.beginPath();
+    c.moveTo(-s * 0.1, s * 0.2);
+    c.lineTo(s * 0.1, s * 0.2);
+    c.lineTo(0, s * 0.38);
+    c.closePath();
+    c.fill();
+    // Teeth
+    c.fillStyle = color;
+    c.globalAlpha = alpha * 0.9;
+    for (let t = -2; t <= 2; t++) {
+      c.beginPath();
+      c.rect(t * s * 0.18 - s * 0.07, s * 0.32, s * 0.14, s * 0.2);
+      c.fill();
+    }
+    c.restore();
+  }
+
+  function drawSnake(c, x, y, size, rot, color, alpha) {
+    c.save();
+    c.globalAlpha = alpha;
+    c.translate(x, y);
+    c.rotate(rot);
+    c.shadowColor = color;
+    c.shadowBlur  = 8;
+    const r = size * 0.4;
+    // Coiled body — two arcs
+    c.strokeStyle = color;
+    c.lineWidth   = size * 0.18;
+    c.lineCap     = 'round';
+    c.beginPath();
+    c.arc(0, 0, r, 0, Math.PI * 1.5);
+    c.stroke();
+    c.beginPath();
+    c.arc(0, 0, r * 0.55, Math.PI * 0.1, Math.PI * 1.6);
+    c.stroke();
+    // Head
+    c.fillStyle = color;
+    c.shadowBlur = 12;
+    c.beginPath();
+    c.ellipse(r * 0.35, -r * 0.95, size * 0.16, size * 0.12, -0.6, 0, Math.PI * 2);
+    c.fill();
+    // Eyes
+    c.fillStyle = '#090710';
+    c.shadowBlur = 0;
+    c.beginPath();
+    c.arc(r * 0.28, -r * 1.0, size * 0.04, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+
+  function drawDrop(c, x, y, size, rot, color, alpha) {
+    c.save();
+    c.globalAlpha = alpha;
+    c.translate(x, y);
+    c.rotate(rot);
+    c.shadowColor = color;
+    c.shadowBlur  = 10;
+    c.fillStyle   = color;
+    const h = size * 0.7;
+    const w = size * 0.35;
+    // Teardrop / blood drop shape
+    c.beginPath();
+    c.arc(0, -h * 0.15, w, 0, Math.PI);
+    c.bezierCurveTo(-w, -h * 0.15, -w * 0.4, h * 0.3, 0, h * 0.6);
+    c.bezierCurveTo(w * 0.4, h * 0.3, w, -h * 0.15, w, -h * 0.15);
+    c.closePath();
+    c.fill();
+    // Highlight
+    c.globalAlpha = alpha * 0.35;
+    c.fillStyle = '#fff';
+    c.shadowBlur = 0;
+    c.beginPath();
+    c.ellipse(-w * 0.25, -h * 0.05, w * 0.2, h * 0.18, -0.4, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+
+  function drawEye(c, x, y, size, rot, color, alpha) {
+    c.save();
+    c.globalAlpha = alpha;
+    c.translate(x, y);
+    c.rotate(rot);
+    c.shadowColor = color;
+    c.shadowBlur  = 14;
+    const rx2 = size * 0.55, ry = size * 0.3;
+    // Eyeball
+    c.fillStyle = '#1a0f1a';
+    c.beginPath();
+    c.ellipse(0, 0, rx2, ry, 0, 0, Math.PI * 2);
+    c.fill();
+    // Iris glow
+    c.fillStyle = color;
+    c.shadowBlur = 18;
+    c.beginPath();
+    c.ellipse(0, 0, rx2 * 0.55, ry * 0.72, 0, 0, Math.PI * 2);
+    c.fill();
+    // Slit pupil
+    c.fillStyle = '#000';
+    c.shadowBlur = 0;
+    c.beginPath();
+    c.ellipse(0, 0, rx2 * 0.12, ry * 0.65, 0, 0, Math.PI * 2);
+    c.fill();
+    // Shine
+    c.fillStyle = 'rgba(255,255,255,0.45)';
+    c.beginPath();
+    c.ellipse(-rx2 * 0.2, -ry * 0.25, rx2 * 0.12, ry * 0.1, -0.3, 0, Math.PI * 2);
+    c.fill();
+    // Eyelid lines
+    c.strokeStyle = color;
+    c.lineWidth   = 1;
+    c.globalAlpha = alpha * 0.4;
+    c.shadowBlur  = 0;
+    c.beginPath();
+    c.moveTo(-rx2, 0);
+    c.bezierCurveTo(-rx2 * 0.5, -ry * 1.1, rx2 * 0.5, -ry * 1.1, rx2, 0);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(-rx2, 0);
+    c.bezierCurveTo(-rx2 * 0.5, ry * 1.1, rx2 * 0.5, ry * 1.1, rx2, 0);
+    c.stroke();
+    c.restore();
+  }
+
+  function drawParticle(c, p) {
+    switch (p.type) {
+      case 'skull': drawSkull(c, p.x, p.y, p.size, p.rot, p.color, p.alpha); break;
+      case 'snake': drawSnake(c, p.x, p.y, p.size, p.rot, p.color, p.alpha); break;
+      case 'drop':  drawDrop (c, p.x, p.y, p.size, p.rot, p.color, p.alpha); break;
+      case 'eye':   drawEye  (c, p.x, p.y, p.size, p.rot, p.color, p.alpha); break;
+    }
+  }
+
+  // ── Update a single particle ──────────────────────
+  function updateParticle(p, w, h) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rot += p.rotSpeed;
+
+    // Bounce off edges with a bit of padding
+    const pad = p.size;
+    if (p.x < pad)      { p.x = pad;      p.vx = Math.abs(p.vx); }
+    if (p.x > w - pad)  { p.x = w - pad;  p.vx = -Math.abs(p.vx); }
+    if (p.y < pad)      { p.y = pad;      p.vy = Math.abs(p.vy); }
+    if (p.y > h - pad)  { p.y = h - pad;  p.vy = -Math.abs(p.vy); }
+
+    // Gentle alpha pulse
+    p.alpha += 0.004 * p.alphaDir;
+    if (p.alpha > 0.85) { p.alpha = 0.85; p.alphaDir = -1; }
+    if (p.alpha < 0.15) { p.alpha = 0.15; p.alphaDir =  1; }
+  }
+
+  // ── Render a full panel ───────────────────────────
+  function renderPanel(c, pool, w, h) {
+    if (w < 2) return; // nothing to draw on narrow screens
+
+    // Subtle dark background so panel is clearly distinct from void
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = 'rgba(8, 3, 12, 0.88)';
+    c.fillRect(0, 0, w, h);
+
+    // Thin inner border — mirrors the game canvas glow
+    c.strokeStyle = 'rgba(57,255,20,0.08)';
+    c.lineWidth = 1;
+    c.strokeRect(0, 0, w, h);
+
+    // Very faint vertical vignette — darker at edges
+    const vg = c.createLinearGradient(0, 0, w, 0);
+    vg.addColorStop(0,   'rgba(0,0,0,0.55)');
+    vg.addColorStop(0.4, 'rgba(0,0,0,0)');
+    vg.addColorStop(1,   'rgba(0,0,0,0.55)');
+    c.fillStyle = vg;
+    c.fillRect(0, 0, w, h);
+
+    if (!pool) return;
+    pool.forEach(p => {
+      updateParticle(p, w, h);
+      drawParticle(c, p);
+    });
+  }
+
+  // ── Main loop — runs alongside everything else ────
+  function panelLoop() {
+    ensurePools();
+
+    // Re-sync sizes in case of resize
+    if (LEFT.width  !== LEFT.offsetWidth  || LEFT.height  !== LEFT.offsetHeight)  resizePanels();
+
+    renderPanel(lx, leftPool,  LEFT.width,  LEFT.height);
+    renderPanel(rx, rightPool, RIGHT.width, RIGHT.height);
+
+    requestAnimationFrame(panelLoop);
+  }
+
+  // Small delay so the DOM has settled before we measure
+  setTimeout(() => {
+    resizePanels();
+    ensurePools();
+    panelLoop();
+  }, 100);
+
+})();

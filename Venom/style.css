@@ -194,13 +194,31 @@ body {
 }
 
 .game-screen {
-  background: #0e0b14; flex-direction: column;
-  align-items: center; justify-content: flex-start;
+  background: #0e0b14; flex-direction: row;
+  align-items: stretch; justify-content: center;
 }
 .game-screen::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
   background: linear-gradient(90deg, transparent, var(--gold), var(--lavender), var(--gold), transparent);
   opacity: 0.4; z-index: 5; pointer-events: none;
+}
+
+/* ── SIDE PANELS ─────────────────────────────────── */
+.side-panel {
+  flex-shrink: 0;
+  /* Width = everything outside the 680px wrapper */
+  width: calc((100vw - 680px) / 2);
+  min-width: 0;
+  height: 100%;
+  display: block;
+  background: transparent;
+  pointer-events: none;
+  /* Hide on small screens where there's no space */
+  visibility: visible;
+}
+/* When viewport is 680px or narrower the side panels collapse to zero */
+@media (max-width: 680px) {
+  .side-panel { width: 0; }
 }
 
 /* Wrapper — fits exactly inside the fixed screen, no scrolling */
@@ -209,6 +227,7 @@ body {
   padding: max(6px, env(safe-area-inset-top)) 16px max(6px, env(safe-area-inset-bottom));
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 /* HEADER — always visible */
