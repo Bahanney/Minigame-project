@@ -49,7 +49,7 @@ window.addEventListener('resize', () => { resizeCanvas(); if (!state.running) re
 function cellSize() { return Math.floor(Math.min(canvas.width / COLS, canvas.height / ROWS)); }
 
 const C = {
-  bg:'#090710', grid:'rgba(212,168,83,0.04)',
+  bg:'#090710', grid:'rgba(212,168,83,0.13)',
   snake:'#5bbf9a', snakeScale:'#4aaa87', snakeDark:'#2d7a5e', snakeGlow:'rgba(91,191,154,0.3)',
   food:'#d4a853', foodGlow:'rgba(212,168,83,0.6)',
   poison:'#c4687a', poisonGlow:'rgba(196,104,122,0.5)',
@@ -351,7 +351,7 @@ function render() {
   const offY = Math.floor((canvas.height - ROWS*CELL) / 2);
 
   ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = '#090710'; ctx.fillRect(offX,offY,COLS*CELL,ROWS*CELL);
+  ctx.fillStyle = '#0f0c1a'; ctx.fillRect(offX,offY,COLS*CELL,ROWS*CELL);
   buildGrid(CELL);
   ctx.drawImage(_gridCanvas, offX, offY);
 

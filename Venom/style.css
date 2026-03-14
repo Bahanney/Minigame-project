@@ -356,6 +356,18 @@ header {
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .overlay-box p { font-size: 11px; color: var(--cream-dim); line-height: 1.7; margin-bottom: 10px; font-style: italic; }
+#gameover-msg {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-style: normal;
+  letter-spacing: 2px;
+  color: var(--rose);
+  background: rgba(196,104,122,0.1);
+  border: 1px solid rgba(196,104,122,0.3);
+  border-left: 3px solid var(--rose);
+  padding: 6px 12px;
+  margin-bottom: 10px;
+}
 .final-score-row { display: flex; justify-content: center; gap: 22px; margin-bottom: 8px; }
 .final-stat { text-align: center; }
 .gameover-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
