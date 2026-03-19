@@ -61,7 +61,18 @@ const DIR = { UP:{x:0,y:-1}, DOWN:{x:0,y:1}, LEFT:{x:-1,y:0}, RIGHT:{x:1,y:0} };
 
 // Web Audio for sound effects
 const audio = new (window.AudioContext || window.webkitAudioContext)();
+
+// iOS/Android: AudioContext starts suspended until a user gesture resumes it
+function resumeAudio() {
+  if (audio.state === 'suspended') audio.resume();
+}
+document.addEventListener('touchstart', resumeAudio, { once: false, passive: true });
+document.addEventListener('touchend',   resumeAudio, { once: false, passive: true });
+document.addEventListener('click',      resumeAudio, { once: false, passive: true });
+document.addEventListener('keydown',    resumeAudio, { once: false, passive: true });
+
 function beep(freq, dur, type='sine', vol=0.15) {
+  if (audio.state === 'suspended') audio.resume();
   const o = audio.createOscillator(), g = audio.createGain();
   o.connect(g); g.connect(audio.destination);
   o.frequency.value = freq; o.type = type;
