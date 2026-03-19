@@ -523,11 +523,15 @@ document.addEventListener('keydown',e=>{
 });
 
 // Buttons
-document.getElementById('yes-btn').addEventListener('click',()=>{
+function startGame() {
   resizeCanvas();
   const n=document.getElementById('player-name-input');
   if(n&&n.value.trim()) playerName=n.value.trim().toUpperCase().slice(0,6);
   go('game-screen'); init();
+}
+document.getElementById('yes-btn').addEventListener('click', startGame);
+document.getElementById('player-name-input').addEventListener('keydown', e=>{
+  if(e.key==='Enter') startGame();
 });
 document.getElementById('no-btn').addEventListener('click',()=>go('goodbye-screen'));
 document.getElementById('return-btn').addEventListener('click',()=>go('welcome-screen'));
